@@ -2,6 +2,10 @@ import { useState } from "react";
 import type { DraggableProvided, DraggableStateSnapshot } from "@hello-pangea/dnd";
 import type { Activity } from "../../types";
 import { TrashIcon, CheckIcon } from "../../components/icons";
+import { KIND_CONFIG } from "../../data/kindConfig";
+import { SKILL_TREE } from "../../data/skillTree";
+import { findLeaf } from "../../lib/skillTreeLookup";
+import { JUST_CLIMBING_LEAF, JUST_CLIMBING_LEAF_ID } from "../../data/syntheticIntents";
 import styles from "./schedule.module.css";
 
 interface ActivityCardProps {
@@ -13,6 +17,12 @@ interface ActivityCardProps {
   isLogged: boolean;
 }
 
+function intentLabel(intentLeafId: string | null): string {
+  if (!intentLeafId) return "";
+  if (intentLeafId === JUST_CLIMBING_LEAF_ID) return JUST_CLIMBING_LEAF.label;
+  return findLeaf(SKILL_TREE, intentLeafId)?.label ?? intentLeafId;
+}
+
 export function ActivityCard({
   task,
   provided,
@@ -22,6 +32,8 @@ export function ActivityCard({
   isLogged,
 }: ActivityCardProps) {
   const [confirming, setConfirming] = useState(false);
+  const kindCfg = KIND_CONFIG[task.kind];
+  const label = intentLabel(task.intentLeafId);
 
   return (
     <div
@@ -43,9 +55,14 @@ export function ActivityCard({
     >
       <div className={styles.cardSeparator} style={{ backgroundColor: task.accent }} />
       <div className={styles.cardText}>
-        <span className={styles.cardTitle}>{task.title}</span>
-        <span className={styles.cardSubtitle}>{task.subtitle}</span>
-        {task.grade && <span className={styles.cardGrade}>{task.grade}</span>}
+        <span
+          className={styles.cardTitle}
+          data-testid="kind-chip"
+          style={{ color: kindCfg.color }}
+        >
+          {kindCfg.label}
+        </span>
+        {label && <span className={styles.cardSubtitle}>{label}</span>}
       </div>
 
       {isLogged && !confirming && (

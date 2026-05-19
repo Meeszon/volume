@@ -44,7 +44,10 @@
       "Bash(Select-Object Name, FullName)",
       "Bash(Get-ChildItem src *)",
       "Bash(Select-String -Pattern \"\\\\.tsx?$\")",
-      "Bash(Sort-Object)"
+      "Bash(Sort-Object)",
+      "Bash(dir /B)",
+      "Skill(to-prd)",
+      "Skill(to-issues)"
     ]
   }
 }

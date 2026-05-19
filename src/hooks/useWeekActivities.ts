@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import type { DropResult } from "@hello-pangea/dnd";
-import type { Activity, ActivityType, Columns, DbActivity, ActivityDetails, FocusOption } from "../types";
+import type { Activity, Block, Columns, DbActivity, Kind } from "../types";
 import { useAuth } from "../contexts/AuthContext";
 import {
   fetchActivities,
@@ -9,8 +9,7 @@ import {
   updateActivityOrders,
   moveActivity,
 } from "../data/activitiesApi";
-import { ACTIVITY_TYPE_CONFIG } from "../data/activityTypeConfig";
-import { computeSubtitle } from "../utils/computeSubtitle";
+import { KIND_CONFIG } from "../data/kindConfig";
 
 const DAY_NAMES = [
   "Monday",
@@ -36,21 +35,17 @@ function dayIdToISODate(dayId: string, weekMonday: Date): string {
   return formatISODate(date);
 }
 
-function dbActivityToUi(dbAct: DbActivity): Activity {
-  const subtitle = computeSubtitle(
-    dbAct.type,
-    dbAct.details,
-    dbAct.focus as FocusOption | null,
-    dbAct.duration_minutes,
-  );
+function dbActivityToUi(dbAct: DbActivity): Activity | null {
+  const cfg = KIND_CONFIG[dbAct.kind];
+  // Legacy rows (pre-migration 002) lack a valid `kind` column — skip them
+  // rather than crash. Applying 002_intent_model.sql clears these.
+  if (!cfg) return null;
   return {
     id: dbAct.id,
-    type: dbAct.type,
-    title: dbAct.title,
-    subtitle,
-    accent: ACTIVITY_TYPE_CONFIG[dbAct.type].color,
-    focus: dbAct.focus,
-    durationMinutes: dbAct.duration_minutes,
+    kind: dbAct.kind,
+    intentLeafId: dbAct.intent_leaf_id,
+    block: dbAct.block,
+    accent: cfg.color,
   };
 }
 
@@ -70,12 +65,18 @@ function groupActivitiesByDay(
     const dayDiff = Math.round(
       (actDate.getTime() - mondayTime) / (1000 * 60 * 60 * 24),
     );
-    if (dayDiff >= 0 && dayDiff < 7) {
-      columns[DAY_NAMES[dayDiff]].push(dbActivityToUi(act));
-    }
+    if (dayDiff < 0 || dayDiff >= 7) continue;
+    const ui = dbActivityToUi(act);
+    if (ui) columns[DAY_NAMES[dayDiff]].push(ui);
   }
 
   return columns;
+}
+
+export interface AddActivityInput {
+  kind: Kind;
+  intentLeafId: string | null;
+  block: Block | null;
 }
 
 export function useWeekActivities(weekMonday: Date) {
@@ -123,7 +124,7 @@ export function useWeekActivities(weekMonday: Date) {
   );
 
   const addActivity = useCallback(
-    async (dayId: string, type: ActivityType, title: string, focus?: string | null, durationMinutes?: number | null, details?: ActivityDetails | null) => {
+    async (dayId: string, input: AddActivityInput) => {
       const userId = session?.user?.id;
       if (!userId) return;
 
@@ -138,11 +139,9 @@ export function useWeekActivities(weekMonday: Date) {
         id: tempId,
         user_id: userId,
         scheduled_date: scheduledDate,
-        type,
-        title,
-        focus: focus ?? null,
-        duration_minutes: durationMinutes ?? null,
-        details: details ?? null,
+        kind: input.kind,
+        intent_leaf_id: input.intentLeafId,
+        block: input.block,
         order,
         created_at: new Date().toISOString(),
       };
@@ -153,11 +152,9 @@ export function useWeekActivities(weekMonday: Date) {
         const persisted = await insertActivity({
           user_id: userId,
           scheduled_date: scheduledDate,
-          type,
-          title,
-          focus: focus ?? null,
-          duration_minutes: durationMinutes ?? null,
-          details: details ?? null,
+          kind: input.kind,
+          intent_leaf_id: input.intentLeafId,
+          block: input.block,
           order,
         });
         setDbActivities((prev) =>

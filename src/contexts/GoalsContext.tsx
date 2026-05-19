@@ -1,57 +1,68 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, useCallback } from "react";
 import type { Goal } from "../types";
+
+const STORAGE_KEY = "volume:goals";
+const MAX_GOALS = 5;
 
 interface GoalsContextValue {
   goals: Goal[];
-  addGoal: (areaId: string, areaLabel: string) => void;
-  removeGoal: (goalId: string) => void;
-  setPrimary: (goalId: string) => void;
-  toggleNode: (goalId: string, nodeId: string) => void;
+  addGoal: (leafId: string) => void;
+  removeGoal: (leafId: string) => void;
+  isGoal: (leafId: string) => boolean;
 }
 
 const GoalsContext = createContext<GoalsContextValue | null>(null);
 
-export function GoalsProvider({ children }: { children: React.ReactNode }) {
-  const [goals, setGoals] = useState<Goal[]>([]);
-
-  const addGoal = (areaId: string, areaLabel: string) => {
-    if (goals.length >= 3) return;
-    if (goals.some((g) => g.areaId === areaId)) return;
-    const isFirst = goals.length === 0;
-    setGoals((prev) => [
-      ...prev,
-      { id: areaId, areaId, areaLabel, isPrimary: isFirst, selectedNodeIds: [areaId] },
-    ]);
-  };
-
-  const removeGoal = (goalId: string) => {
-    setGoals((prev) => {
-      const filtered = prev.filter((g) => g.id !== goalId);
-      if (filtered.length > 0 && !filtered.some((g) => g.isPrimary)) {
-        return filtered.map((g, i) => ({ ...g, isPrimary: i === 0 }));
-      }
-      return filtered;
-    });
-  };
-
-  const setPrimary = (goalId: string) => {
-    setGoals((prev) => prev.map((g) => ({ ...g, isPrimary: g.id === goalId })));
-  };
-
-  const toggleNode = (goalId: string, nodeId: string) => {
-    setGoals((prev) =>
-      prev.map((g) => {
-        if (g.id !== goalId) return g;
-        const ids = g.selectedNodeIds.includes(nodeId)
-          ? g.selectedNodeIds.filter((id) => id !== nodeId)
-          : [...g.selectedNodeIds, nodeId];
-        return { ...g, selectedNodeIds: ids };
-      })
+function loadGoals(): Goal[] {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored) return [];
+    const parsed = JSON.parse(stored);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (g): g is Goal => g && typeof g === "object" && typeof g.leafId === "string",
     );
-  };
+  } catch {
+    return [];
+  }
+}
+
+function persist(goals: Goal[]): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(goals));
+  } catch {
+    // ignore storage errors
+  }
+}
+
+export function GoalsProvider({ children }: { children: React.ReactNode }) {
+  const [goals, setGoals] = useState<Goal[]>(loadGoals);
+
+  const addGoal = useCallback((leafId: string) => {
+    setGoals((prev) => {
+      if (prev.length >= MAX_GOALS) return prev;
+      if (prev.some((g) => g.leafId === leafId)) return prev;
+      const next = [...prev, { leafId }];
+      persist(next);
+      return next;
+    });
+  }, []);
+
+  const removeGoal = useCallback((leafId: string) => {
+    setGoals((prev) => {
+      const next = prev.filter((g) => g.leafId !== leafId);
+      persist(next);
+      return next;
+    });
+  }, []);
+
+  const isGoal = useCallback(
+    (leafId: string) => goals.some((g) => g.leafId === leafId),
+    [goals],
+  );
 
   return (
-    <GoalsContext.Provider value={{ goals, addGoal, removeGoal, setPrimary, toggleNode }}>
+    <GoalsContext.Provider value={{ goals, addGoal, removeGoal, isGoal }}>
       {children}
     </GoalsContext.Provider>
   );

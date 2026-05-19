@@ -2,7 +2,10 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import type { Activity } from "../../types";
 import type { LogData } from "../../hooks/useActivityLog";
-import { ACTIVITY_TYPE_CONFIG } from "../../data/activityTypeConfig";
+import { KIND_CONFIG } from "../../data/kindConfig";
+import { SKILL_TREE } from "../../data/skillTree";
+import { findLeaf } from "../../lib/skillTreeLookup";
+import { JUST_CLIMBING_LEAF, JUST_CLIMBING_LEAF_ID } from "../../data/syntheticIntents";
 import { XIcon, TrashIcon } from "../../components/icons";
 import styles from "./ActivityDetailPanel.module.css";
 
@@ -20,8 +23,14 @@ type PanelMode = "editable" | "readonly";
 function initForm(logData: LogData | null): Record<string, string> {
   if (!logData) return {};
   return Object.fromEntries(
-    Object.entries(logData).map(([k, v]) => [k, String(v ?? "")])
+    Object.entries(logData).map(([k, v]) => [k, String(v ?? "")]),
   );
+}
+
+function intentLabel(intentLeafId: string | null): string {
+  if (!intentLeafId) return "";
+  if (intentLeafId === JUST_CLIMBING_LEAF_ID) return JUST_CLIMBING_LEAF.label;
+  return findLeaf(SKILL_TREE, intentLeafId)?.label ?? intentLeafId;
 }
 
 export function ActivityDetailPanel({
@@ -40,6 +49,8 @@ export function ActivityDetailPanel({
     setFormData((prev) => ({ ...prev, [key]: value }));
 
   const isReadOnly = mode === "readonly";
+  const kindCfg = KIND_CONFIG[activity.kind];
+  const intent = intentLabel(activity.intentLeafId);
 
   function handleLog() {
     onSaveLog(activity.id, formData);
@@ -65,8 +76,8 @@ export function ActivityDetailPanel({
           <div className={styles.panelHeaderLeft}>
             <div className={styles.panelAccent} style={{ backgroundColor: activity.accent }} />
             <div>
-              <div className={styles.panelTitle}>{activity.title}</div>
-              <div className={styles.panelType}>{ACTIVITY_TYPE_CONFIG[activity.type].summaryLabel}</div>
+              <div className={styles.panelTitle}>{intent || kindCfg.label}</div>
+              <div className={styles.panelType}>{kindCfg.label}</div>
             </div>
           </div>
           <button className={styles.closeBtn} onClick={onClose} aria-label="Close panel">
@@ -75,35 +86,42 @@ export function ActivityDetailPanel({
         </div>
 
         <div className={styles.panelBody}>
-          {activity.type === "climbing" && (
-            <ClimbingForm
-              intentNodeId={activity.focus ?? null}
-              formData={formData}
-              setField={setField}
-              readOnly={isReadOnly}
-            />
-          )}
-          {activity.type === "conditioning" && (
-            <ConditioningForm
-              formData={formData}
-              setField={setField}
-              readOnly={isReadOnly}
-            />
-          )}
-          {activity.type === "mobility" && (
-            <MobilityForm
-              formData={formData}
-              setField={setField}
-              readOnly={isReadOnly}
-            />
-          )}
-          {activity.type === "warmup" && (
-            <WarmupForm
-              formData={formData}
-              setField={setField}
-              readOnly={isReadOnly}
-            />
-          )}
+          <div className={styles.form}>
+            {activity.kind === "climb" && (
+              <div className={styles.fieldGroup}>
+                <div className={styles.fieldLabel}>Perceived Intensity</div>
+                <div className={styles.intensityRow}>
+                  {(["Easy", "Moderate", "Hard"] as const).map((opt) => (
+                    <button
+                      key={opt}
+                      className={`${styles.intensityBtn}${
+                        formData.intensity === opt.toLowerCase()
+                          ? ` ${styles.intensityBtnActive}`
+                          : ""
+                      }`}
+                      onClick={() => !isReadOnly && setField("intensity", opt.toLowerCase())}
+                      disabled={isReadOnly}
+                      type="button"
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className={styles.fieldGroup}>
+              <div className={styles.fieldLabel}>Notes</div>
+              <textarea
+                className={styles.textarea}
+                value={formData.notes ?? ""}
+                onChange={(e) => setField("notes", e.target.value)}
+                readOnly={isReadOnly}
+                placeholder={isReadOnly ? "" : "How did it go?"}
+                rows={4}
+              />
+            </div>
+          </div>
         </div>
 
         <div className={styles.panelFooter}>
@@ -145,190 +163,5 @@ export function ActivityDetailPanel({
         </div>
       </motion.div>
     </>
-  );
-}
-
-/* ── Per-type forms ── */
-
-interface FormProps {
-  formData: Record<string, string>;
-  setField: (key: string, value: string) => void;
-  readOnly: boolean;
-}
-
-function ClimbingForm({
-  intentNodeId,
-  formData,
-  setField,
-  readOnly,
-}: FormProps & { intentNodeId: string | null }) {
-  const intensities = ["Easy", "Moderate", "Hard"] as const;
-
-  return (
-    <div className={styles.form}>
-      <div className={styles.fieldGroup}>
-        <div className={styles.fieldLabel}>Perceived Intensity</div>
-        <div className={styles.intensityRow}>
-          {intensities.map((opt) => (
-            <button
-              key={opt}
-              className={`${styles.intensityBtn}${
-                formData.intensity === opt.toLowerCase() ? ` ${styles.intensityBtnActive}` : ""
-              }`}
-              onClick={() => !readOnly && setField("intensity", opt.toLowerCase())}
-              disabled={readOnly}
-              type="button"
-            >
-              {opt}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {intentNodeId && (
-        <div className={styles.fieldGroup}>
-          <div className={styles.fieldLabel}>Intent</div>
-          <div className={styles.intentDisplay}>{intentNodeId}</div>
-        </div>
-      )}
-
-      <div className={styles.fieldGroup}>
-        <div className={styles.fieldLabel}>Notes</div>
-        <textarea
-          className={styles.textarea}
-          value={formData.notes ?? ""}
-          onChange={(e) => setField("notes", e.target.value)}
-          readOnly={readOnly}
-          placeholder={readOnly ? "" : "How did it go?"}
-          rows={4}
-        />
-      </div>
-    </div>
-  );
-}
-
-function ConditioningForm({ formData, setField, readOnly }: FormProps) {
-  return (
-    <div className={styles.form}>
-      <div className={styles.numericRow}>
-        <div className={styles.fieldGroup}>
-          <div className={styles.fieldLabel}>Sets</div>
-          <input
-            className={styles.numberInput}
-            type="number"
-            min={0}
-            value={formData.sets ?? ""}
-            onChange={(e) => setField("sets", e.target.value)}
-            readOnly={readOnly}
-            placeholder="0"
-          />
-        </div>
-        <div className={styles.fieldGroup}>
-          <div className={styles.fieldLabel}>Reps</div>
-          <input
-            className={styles.numberInput}
-            type="number"
-            min={0}
-            value={formData.reps ?? ""}
-            onChange={(e) => setField("reps", e.target.value)}
-            readOnly={readOnly}
-            placeholder="0"
-          />
-        </div>
-        <div className={styles.fieldGroup}>
-          <div className={styles.fieldLabel}>Weight</div>
-          <div className={styles.inputWithUnit}>
-            <input
-              className={`${styles.numberInput} ${styles.weightInput}`}
-              type="number"
-              min={0}
-              value={formData.weight ?? ""}
-              onChange={(e) => setField("weight", e.target.value)}
-              readOnly={readOnly}
-              placeholder="0"
-            />
-            <span className={styles.unitLabel}>kg</span>
-          </div>
-        </div>
-      </div>
-
-      <div className={styles.fieldGroup}>
-        <div className={styles.fieldLabel}>Notes</div>
-        <textarea
-          className={styles.textarea}
-          value={formData.notes ?? ""}
-          onChange={(e) => setField("notes", e.target.value)}
-          readOnly={readOnly}
-          placeholder={readOnly ? "" : "Any observations?"}
-          rows={4}
-        />
-      </div>
-    </div>
-  );
-}
-
-function MobilityForm({ formData, setField, readOnly }: FormProps) {
-  return (
-    <div className={styles.form}>
-      <div className={styles.numericRow}>
-        <div className={styles.fieldGroup}>
-          <div className={styles.fieldLabel}>Sets</div>
-          <input
-            className={styles.numberInput}
-            type="number"
-            min={0}
-            value={formData.sets ?? ""}
-            onChange={(e) => setField("sets", e.target.value)}
-            readOnly={readOnly}
-            placeholder="0"
-          />
-        </div>
-        <div className={styles.fieldGroup}>
-          <div className={styles.fieldLabel}>Duration / set</div>
-          <div className={styles.inputWithUnit}>
-            <input
-              className={`${styles.numberInput} ${styles.durationInput}`}
-              type="number"
-              min={0}
-              value={formData.duration ?? ""}
-              onChange={(e) => setField("duration", e.target.value)}
-              readOnly={readOnly}
-              placeholder="0"
-            />
-            <span className={styles.unitLabel}>s</span>
-          </div>
-        </div>
-      </div>
-
-      <div className={styles.fieldGroup}>
-        <div className={styles.fieldLabel}>Notes</div>
-        <textarea
-          className={styles.textarea}
-          value={formData.notes ?? ""}
-          onChange={(e) => setField("notes", e.target.value)}
-          readOnly={readOnly}
-          placeholder={readOnly ? "" : "Any observations?"}
-          rows={4}
-        />
-      </div>
-    </div>
-  );
-}
-
-function WarmupForm({ formData, setField, readOnly }: FormProps) {
-  return (
-    <div className={styles.form}>
-      <div className={styles.fieldGroup}>
-        <div className={styles.fieldLabel}>Notes</div>
-        <textarea
-          className={styles.textarea}
-          value={formData.notes ?? ""}
-          onChange={(e) => setField("notes", e.target.value)}
-          readOnly={readOnly}
-          placeholder={readOnly ? "" : "Anything to note?"}
-          rows={5}
-        />
-      </div>
-    </div>
   );
 }

@@ -9,16 +9,23 @@ interface SkillDetailPanelProps {
   onClose: () => void;
 }
 
-export function SkillDetailPanel({ leaf, categoryColor, onClose }: SkillDetailPanelProps) {
-  const { goals, addGoal } = useGoals();
-  const isGoal = goals.some((g) => g.areaId === leaf.id);
-  const isFull = goals.length >= 3;
+const MAX_GOALS = 5;
 
-  const goalButtonLabel = isGoal
-    ? "✓ Active Goal"
+export function SkillDetailPanel({ leaf, categoryColor, onClose }: SkillDetailPanelProps) {
+  const { goals, addGoal, removeGoal, isGoal } = useGoals();
+  const goalActive = isGoal(leaf.id);
+  const isFull = goals.length >= MAX_GOALS;
+
+  const goalButtonLabel = goalActive
+    ? "Remove Goal"
     : isFull
-      ? "Goals Full (max 3)"
-      : "Set as Current Goal";
+      ? `Goals Full (max ${MAX_GOALS})`
+      : "Set as Goal";
+
+  const handleGoalToggle = () => {
+    if (goalActive) removeGoal(leaf.id);
+    else addGoal(leaf.id);
+  };
 
   return (
     <motion.div
@@ -58,9 +65,9 @@ export function SkillDetailPanel({ leaf, categoryColor, onClose }: SkillDetailPa
 
       <div className={styles.panelFooter}>
         <button
-          className={`${styles.goalBtn} ${isGoal ? styles.goalBtnActive : ""}`}
-          disabled={isGoal || isFull}
-          onClick={() => addGoal(leaf.id, leaf.label)}
+          className={`${styles.goalBtn} ${goalActive ? styles.goalBtnActive : ""}`}
+          disabled={!goalActive && isFull}
+          onClick={handleGoalToggle}
         >
           {goalButtonLabel}
         </button>

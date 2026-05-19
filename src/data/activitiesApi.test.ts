@@ -45,10 +45,9 @@ describe("activitiesApi", () => {
           id: "a1",
           user_id: "u1",
           scheduled_date: "2026-04-27",
-          type: "conditioning",
-          title: "Pull Ups",
-          focus: null,
-          duration_minutes: null,
+          kind: "climb",
+          intent_leaf_id: "footwork",
+          block: null,
           order: 0,
           created_at: "2026-04-27T00:00:00Z",
         },
@@ -88,11 +87,9 @@ describe("activitiesApi", () => {
       const input = {
         user_id: "u1",
         scheduled_date: "2026-04-28",
-        type: "mobility" as const,
-        title: "Ankle Flexibility",
-        focus: null,
-        duration_minutes: null,
-        details: null,
+        kind: "train" as const,
+        intent_leaf_id: "hip-mobility",
+        block: null,
         order: 0,
       };
       const returned = { ...input, id: "new-id", created_at: "2026-04-28T00:00:00Z" };
@@ -120,11 +117,9 @@ describe("activitiesApi", () => {
         insertActivity({
           user_id: "u1",
           scheduled_date: "2026-04-28",
-          type: "mobility",
-          title: "Test",
-          focus: null,
-          duration_minutes: null,
-          details: null,
+          kind: "train",
+          intent_leaf_id: "hip-mobility",
+          block: null,
           order: 0,
         }),
       ).rejects.toEqual({ message: "insert failed" });

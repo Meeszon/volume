@@ -3,25 +3,10 @@ export interface Exercise {
   detail: string;
 }
 
-export interface Skill {
-  id: string;
-  label: string;
-  exercises: Exercise[];
-}
+// Activity Kind — replaces the old 4-value ActivityType
+export type Kind = "climb" | "warmup" | "train";
 
-export interface Category {
-  id: string;
-  label: string;
-  color: string;
-  skills: Skill[];
-}
-
-export interface SelectedSkillV1 extends Skill {
-  categoryColor: string;
-  categoryLabel: string;
-}
-
-// Recursive skill tree
+// Skill tree
 export interface TreeBranch {
   id: string;
   label: string;
@@ -33,39 +18,38 @@ export interface TreeLeaf {
   label: string;
   description?: string;
   exercises: Exercise[];
+  allowedKinds: Kind[];
+  blocks?: Block[];
 }
 
 export type TreeNode = TreeBranch | TreeLeaf;
 
-export interface SelectedSkillV2 extends TreeLeaf {
-  ancestorPath: string[];
+// Block — unified training prescription
+export interface ExerciseDetail {
+  name: string;
+  sets: number;
+  value: number;
+  unit: "reps" | "seconds";
+  rest: number;
 }
 
-// Goals
-export interface GoalTag {
-  nodeId: string;
-  nodeLabel: string;
+export interface Block {
+  name: string;
+  exercises: ExerciseDetail[];
 }
 
+// Goals — single leaf per Goal; up to 5 per user; no Primary
 export interface Goal {
-  id: string;
-  areaId: string;
-  areaLabel: string;
-  isPrimary: boolean;
-  selectedNodeIds: string[];
+  leafId: string;
 }
 
-// Schedule / kanban
+// Schedule / kanban (UI shape)
 export interface Activity {
   id: string;
-  type: ActivityType;
-  title: string;
-  subtitle: string;
-  grade?: string;
+  kind: Kind;
+  intentLeafId: string | null;
+  block: Block | null;
   accent: string;
-  goalTags?: GoalTag[];
-  focus?: string | null;
-  durationMinutes?: number | null;
 }
 
 export interface Day {
@@ -75,75 +59,14 @@ export interface Day {
 
 export type Columns = Record<string, Activity[]>;
 
-// Supabase activity row
-export type ActivityType = "climbing" | "conditioning" | "mobility" | "warmup";
-
+// Supabase row
 export interface DbActivity {
   id: string;
   user_id: string;
   scheduled_date: string;
-  type: ActivityType;
-  title: string;
-  focus: string | null;
-  duration_minutes: number | null;
-  details: ActivityDetails | null;
+  kind: Kind;
+  intent_leaf_id: string | null;
+  block: Block | null;
   order: number;
   created_at: string;
 }
-
-// Activity templates
-export type ActivityCategory = "conditioning" | "mobility" | "warmup";
-
-export interface TemplateExercise {
-  name: string;
-  unit: "reps" | "seconds";
-  defaultSets: number;
-  defaultValue: number;
-  defaultRest: number;
-}
-
-export type ActivityTemplate =
-  | {
-      name: string;
-      category: ActivityCategory;
-      kind: "block";
-      exercises: TemplateExercise[];
-    }
-  | {
-      name: string;
-      category: ActivityCategory;
-      kind: "exercise";
-      unit: "reps" | "seconds";
-      defaultSets: number;
-      defaultValue: number;
-      defaultRest: number;
-    };
-
-// Activity details (for non-climbing activities)
-export interface ExerciseDetail {
-  name: string;
-  sets: number;
-  value: number;
-  unit: "reps" | "seconds";
-  rest: number;
-}
-
-export type ActivityDetails =
-  | { kind: "block"; exercises: ExerciseDetail[] }
-  | { kind: "exercise"; sets: number; value: number; unit: "reps" | "seconds"; rest: number };
-
-// Focus options (for climbing sessions)
-export type FocusOption =
-  | "Endurance"
-  | "Power"
-  | "Technique"
-  | "Footwork"
-  | "Finger Strength";
-
-export const FOCUS_OPTIONS: FocusOption[] = [
-  "Endurance",
-  "Power",
-  "Technique",
-  "Footwork",
-  "Finger Strength",
-];

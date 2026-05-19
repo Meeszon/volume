@@ -17,7 +17,7 @@ Single-context repo:
 /
 ├── CONTEXT.md
 ├── docs/adr/
-│   └── 0001-exercise-details-as-json-blob.md
+│   └── 0001-example-decision.md
 └── src/
 ```
 
@@ -31,4 +31,4 @@ If the concept you need isn't in the glossary yet, that's a signal — either yo
 
 If your output contradicts an existing ADR, surface it explicitly rather than silently overriding:
 
-> _Contradicts ADR-0001 (exercise details as JSON blob) — but worth reopening because…_
+> _Contradicts ADR-0001 (title) — but worth reopening because…_

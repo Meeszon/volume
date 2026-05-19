@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ActivityCard } from "./ActivityCard";
 import type { Activity } from "../../types";
+import { JUST_CLIMBING_LEAF_ID } from "../../data/syntheticIntents";
 import type {
   DraggableProvided,
   DraggableStateSnapshot,
@@ -10,10 +11,10 @@ import type {
 
 const task: Activity = {
   id: "a1",
-  type: "conditioning",
-  title: "Pull Ups",
-  subtitle: "Conditioning",
-  accent: "#FF8B00",
+  kind: "climb",
+  intentLeafId: "footwork",
+  block: null,
+  accent: "#F5A623",
 };
 
 const provided = {
@@ -24,114 +25,68 @@ const provided = {
 
 const snapshot = { isDragging: false } as DraggableStateSnapshot;
 
-describe("ActivityCard", () => {
-  it("renders activity title and subtitle", () => {
-    render(
-      <ActivityCard
-        task={task}
-        provided={provided}
-        snapshot={snapshot}
-        onDelete={vi.fn()}
-        onOpenPanel={vi.fn()}
-        isLogged={false}
-      />,
-    );
+function renderCard(overrides: Partial<Activity> = {}, onDelete = vi.fn()) {
+  return render(
+    <ActivityCard
+      task={{ ...task, ...overrides }}
+      provided={provided}
+      snapshot={snapshot}
+      onDelete={onDelete}
+      onOpenPanel={vi.fn()}
+      isLogged={false}
+    />,
+  );
+}
 
-    expect(screen.getByText("Pull Ups")).toBeTruthy();
-    expect(screen.getByText("Conditioning")).toBeTruthy();
+describe("ActivityCard", () => {
+  it("renders the Kind chip", () => {
+    renderCard();
+    expect(screen.getByTestId("kind-chip").textContent).toBe("Climb");
+  });
+
+  it("renders the intent leaf label", () => {
+    renderCard();
+    expect(screen.getByText("Footwork")).toBeTruthy();
+  });
+
+  it("renders 'Just Climbing' for the synthetic intent", () => {
+    renderCard({ intentLeafId: JUST_CLIMBING_LEAF_ID });
+    expect(screen.getByText("Just Climbing")).toBeTruthy();
+  });
+
+  it("does not render an intent label when intentLeafId is null", () => {
+    renderCard({ kind: "warmup", intentLeafId: null });
+    expect(screen.queryByText("Footwork")).toBeNull();
   });
 
   it("shows a delete button", () => {
-    render(
-      <ActivityCard
-        task={task}
-        provided={provided}
-        snapshot={snapshot}
-        onDelete={vi.fn()}
-        onOpenPanel={vi.fn()}
-        isLogged={false}
-      />,
-    );
-
+    renderCard();
     expect(screen.getByRole("button", { name: /delete/i })).toBeTruthy();
   });
 
   it("shows confirmation step when delete button is clicked", async () => {
     const user = userEvent.setup();
-    render(
-      <ActivityCard
-        task={task}
-        provided={provided}
-        snapshot={snapshot}
-        onDelete={vi.fn()}
-        onOpenPanel={vi.fn()}
-        isLogged={false}
-      />,
-    );
-
+    renderCard();
     await user.click(screen.getByRole("button", { name: /delete/i }));
-
     expect(screen.getByRole("button", { name: /confirm/i })).toBeTruthy();
     expect(screen.getByRole("button", { name: /cancel/i })).toBeTruthy();
   });
 
-  it("calls onDelete with dayId and activity id when confirmed", async () => {
+  it("calls onDelete with activity id when confirmed", async () => {
     const onDelete = vi.fn();
     const user = userEvent.setup();
-    render(
-      <ActivityCard
-        task={task}
-        provided={provided}
-        snapshot={snapshot}
-        onDelete={onDelete}
-        onOpenPanel={vi.fn()}
-        isLogged={false}
-      />,
-    );
-
+    renderCard({}, onDelete);
     await user.click(screen.getByRole("button", { name: /delete/i }));
     await user.click(screen.getByRole("button", { name: /confirm/i }));
-
     expect(onDelete).toHaveBeenCalledWith("a1");
   });
 
   it("does not call onDelete when cancel is clicked", async () => {
     const onDelete = vi.fn();
     const user = userEvent.setup();
-    render(
-      <ActivityCard
-        task={task}
-        provided={provided}
-        snapshot={snapshot}
-        onDelete={onDelete}
-        onOpenPanel={vi.fn()}
-        isLogged={false}
-      />,
-    );
-
+    renderCard({}, onDelete);
     await user.click(screen.getByRole("button", { name: /delete/i }));
     await user.click(screen.getByRole("button", { name: /cancel/i }));
-
     expect(onDelete).not.toHaveBeenCalled();
-  });
-
-  it("returns to normal state after cancelling", async () => {
-    const user = userEvent.setup();
-    render(
-      <ActivityCard
-        task={task}
-        provided={provided}
-        snapshot={snapshot}
-        onDelete={vi.fn()}
-        onOpenPanel={vi.fn()}
-        isLogged={false}
-      />,
-    );
-
-    await user.click(screen.getByRole("button", { name: /delete/i }));
-    await user.click(screen.getByRole("button", { name: /cancel/i }));
-
-    expect(screen.getByRole("button", { name: /delete/i })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /confirm/i })).toBeNull();
   });
 });

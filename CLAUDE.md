@@ -2,7 +2,7 @@
 
 ### Issue tracker
 
-Issues live in GitHub Issues (`github.com/Meeszon/volume-demo`). See `docs/agents/issue-tracker.md`.
+Issues live in GitHub Issues (`github.com/Meeszon/volume`). See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 

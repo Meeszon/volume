@@ -2,6 +2,13 @@ import { describe, it, expect } from "vitest";
 import { isLeaf, getAncestorIds, getTopLevelAreas, nodeMatchesSearch, getAutoExpandIds } from "./tree";
 import type { TreeNode, TreeLeaf, TreeBranch } from "../types";
 
+const leaf = (id: string, label: string): TreeLeaf => ({
+  id,
+  label,
+  exercises: [],
+  allowedKinds: ["climb"],
+});
+
 const MOCK_TREE: TreeNode[] = [
   {
     id: "root-a",
@@ -10,26 +17,21 @@ const MOCK_TREE: TreeNode[] = [
       {
         id: "branch-a",
         label: "Branch A",
-        children: [
-          { id: "leaf-a1", label: "Leaf A1", exercises: [] },
-          { id: "leaf-a2", label: "Leaf A2", exercises: [] },
-        ],
+        children: [leaf("leaf-a1", "Leaf A1"), leaf("leaf-a2", "Leaf A2")],
       },
-      { id: "leaf-a3", label: "Leaf A3", exercises: [] },
+      leaf("leaf-a3", "Leaf A3"),
     ],
   },
   {
     id: "root-b",
     label: "Root B",
-    children: [
-      { id: "leaf-b1", label: "Leaf B1", exercises: [] },
-    ],
+    children: [leaf("leaf-b1", "Leaf B1")],
   },
 ];
 
 describe("isLeaf", () => {
   it("returns true for a leaf node", () => {
-    expect(isLeaf({ id: "x", label: "X", exercises: [] })).toBe(true);
+    expect(isLeaf({ id: "x", label: "X", exercises: [], allowedKinds: ["climb"] })).toBe(true);
   });
   it("returns false for a branch node", () => {
     expect(isLeaf({ id: "x", label: "X", children: [] })).toBe(false);
@@ -67,18 +69,18 @@ describe("getTopLevelAreas", () => {
 
 describe("nodeMatchesSearch", () => {
   it("returns true for a leaf whose label matches (case-insensitive)", () => {
-    const leaf: TreeLeaf = { id: "slopers", label: "Slopers", exercises: [] };
-    expect(nodeMatchesSearch(leaf, "SLOPE")).toBe(true);
+    const node: TreeLeaf = leaf("slopers", "Slopers");
+    expect(nodeMatchesSearch(node, "SLOPE")).toBe(true);
   });
   it("returns false for a leaf with no matching label", () => {
-    const leaf: TreeLeaf = { id: "slopers", label: "Slopers", exercises: [] };
-    expect(nodeMatchesSearch(leaf, "crimp")).toBe(false);
+    const node: TreeLeaf = leaf("slopers", "Slopers");
+    expect(nodeMatchesSearch(node, "crimp")).toBe(false);
   });
   it("returns true for a branch where a descendant leaf matches", () => {
     const branch: TreeBranch = {
       id: "hold-types",
       label: "Hold Types",
-      children: [{ id: "slopers", label: "Slopers", exercises: [] }],
+      children: [leaf("slopers", "Slopers")],
     };
     expect(nodeMatchesSearch(branch, "slope")).toBe(true);
   });
@@ -86,7 +88,7 @@ describe("nodeMatchesSearch", () => {
     const branch: TreeBranch = {
       id: "hold-types",
       label: "Hold Types",
-      children: [{ id: "slopers", label: "Slopers", exercises: [] }],
+      children: [leaf("slopers", "Slopers")],
     };
     expect(nodeMatchesSearch(branch, "cave")).toBe(false);
   });
@@ -94,7 +96,7 @@ describe("nodeMatchesSearch", () => {
     const branch: TreeBranch = {
       id: "hold-types",
       label: "Hold Types",
-      children: [{ id: "slopers", label: "Slopers", exercises: [] }],
+      children: [leaf("slopers", "Slopers")],
     };
     expect(nodeMatchesSearch(branch, "hold")).toBe(true);
   });
@@ -104,10 +106,7 @@ const SEARCH_TREE: TreeNode[] = [
   {
     id: "hold-types",
     label: "Hold Types",
-    children: [
-      { id: "slopers", label: "Slopers", exercises: [] },
-      { id: "crimps", label: "Crimps", exercises: [] },
-    ],
+    children: [leaf("slopers", "Slopers"), leaf("crimps", "Crimps")],
   },
   {
     id: "wall-angles",
@@ -116,7 +115,7 @@ const SEARCH_TREE: TreeNode[] = [
       {
         id: "slab",
         label: "Slab",
-        children: [{ id: "smearing", label: "Smearing", exercises: [] }],
+        children: [leaf("smearing", "Smearing")],
       },
     ],
   },
@@ -147,11 +146,11 @@ describe("getAutoExpandIds", () => {
 
 describe("TreeLeaf description field", () => {
   it("accepts optional description", () => {
-    const leaf: TreeLeaf = { id: "x", label: "X", description: "Test desc", exercises: [] };
-    expect(leaf.description).toBe("Test desc");
+    const node: TreeLeaf = { id: "x", label: "X", description: "Test desc", exercises: [], allowedKinds: ["climb"] };
+    expect(node.description).toBe("Test desc");
   });
   it("description is optional", () => {
-    const leaf: TreeLeaf = { id: "y", label: "Y", exercises: [] };
-    expect(leaf.description).toBeUndefined();
+    const node: TreeLeaf = { id: "y", label: "Y", exercises: [], allowedKinds: ["climb"] };
+    expect(node.description).toBeUndefined();
   });
 });

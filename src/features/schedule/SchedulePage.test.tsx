@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 const mockUseWeekActivities = vi.hoisted(() => vi.fn());
@@ -59,7 +59,15 @@ describe("SchedulePage", () => {
   it("does not show 'Rest Day' for a day that has activities", () => {
     const columns: Columns = {
       ...EMPTY_COLUMNS,
-      Monday: [{ id: "a1", type: "conditioning", title: "Pull Ups", subtitle: "Conditioning", accent: "#FF8B00" }],
+      Monday: [
+        {
+          id: "a1",
+          kind: "climb",
+          intentLeafId: "footwork",
+          block: null,
+          accent: "#F5A623",
+        },
+      ],
     };
 
     mockUseWeekActivities.mockReturnValue({
@@ -118,25 +126,19 @@ describe("SchedulePage", () => {
       expect(screen.getByText(/Add Activity —/)).toBeTruthy();
     });
 
-    it("completing modal flow calls addActivity and closes modal", async () => {
+    it("completing the Climb flow calls addActivity and closes the modal", async () => {
       const user = userEvent.setup();
       render(<SchedulePage />);
 
       const addButtons = screen.getAllByText("Add Activity");
       await user.click(addButtons[0]);
 
-      await user.click(screen.getByRole("button", { name: /conditioning/i }));
-      await user.click(screen.getByText("Weighted Pull Ups"));
-      const modal = screen.getByTestId("modal-overlay");
-      await user.click(within(modal).getByRole("button", { name: /add activity/i }));
+      await user.click(screen.getByRole("button", { name: /^climb$/i }));
+      await user.click(screen.getByText("Footwork"));
 
       expect(mockAddActivity).toHaveBeenCalledWith(
         expect.any(String),
-        "conditioning",
-        "Weighted Pull Ups",
-        undefined,
-        undefined,
-        { kind: "exercise", sets: 3, value: 10, unit: "reps", rest: 60 },
+        { kind: "climb", intentLeafId: "footwork", block: null },
       );
       expect(screen.queryByTestId("modal-overlay")).toBeNull();
     });

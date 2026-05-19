@@ -3,9 +3,7 @@ import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { AnimatePresence } from "framer-motion";
 import { getMonday, getWeekDays, shiftWeek, formatWeekLabel, isCurrentWeek } from "../../utils/weekDates";
 import { useWeekActivities } from "../../hooks/useWeekActivities";
-import { useWeeklyTargets } from "../../hooks/useWeeklyTargets";
 import { useActivityLog } from "../../hooks/useActivityLog";
-import { getWeekSummary } from "../../utils/weekSummary";
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon } from "../../components/icons";
 import { ActivityCard } from "./ActivityCard";
 import { AddActivityModal } from "./AddActivityModal";
@@ -22,14 +20,11 @@ export function SchedulePage() {
   const { columns, loading, error, addActivity, deleteActivity, handleDragEnd } =
     useWeekActivities(weekMonday);
 
-  const { targets, setTarget } = useWeeklyTargets();
   const { isLogged, getLog, saveLog } = useActivityLog();
 
   const days = useMemo(() => getWeekDays(weekMonday), [weekMonday]);
   const weekLabel = useMemo(() => formatWeekLabel(weekMonday), [weekMonday]);
   const onCurrentWeek = useMemo(() => isCurrentWeek(weekMonday), [weekMonday]);
-
-  const summary = useMemo(() => getWeekSummary(Object.values(columns).flat(), targets), [columns, targets]);
 
   const goToPrevWeek = useCallback(() => setWeekMonday((m) => shiftWeek(m, -1)), []);
   const goToNextWeek = useCallback(() => setWeekMonday((m) => shiftWeek(m, 1)), []);
@@ -92,7 +87,7 @@ export function SchedulePage() {
         </div>
       </header>
 
-      <LoadSummaryBar summary={summary} targets={targets} onSetTarget={setTarget} />
+      <LoadSummaryBar />
 
       <DragDropContext onDragEnd={handleDragEnd}>
         <div
@@ -153,9 +148,7 @@ export function SchedulePage() {
         <AddActivityModal
           dayLabel={`${modalDay.id} ${modalDay.date}`}
           onClose={() => setModalDayId(null)}
-          onAdd={(type, title, focus, durationMinutes, details) => {
-            addActivity(modalDay.id, type, title, focus, durationMinutes, details);
-          }}
+          onAdd={(input) => addActivity(modalDay.id, input)}
         />
       )}
 
