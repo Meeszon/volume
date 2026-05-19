@@ -24,7 +24,7 @@ vi.mock("../data/activitiesApi", () => ({
   moveActivity: mockMoveActivity,
 }));
 
-vi.mock("../contexts/AuthContext", () => ({
+vi.mock("../contexts/useAuth", () => ({
   useAuth: () => ({
     session: { user: { id: "test-user" } },
     loading: false,

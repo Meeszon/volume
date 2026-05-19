@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import type { DropResult } from "@hello-pangea/dnd";
 import type { Activity, Block, Columns, DbActivity, Kind } from "../types";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "../contexts/useAuth";
 import {
   fetchActivities,
   insertActivity,
@@ -82,7 +82,7 @@ export interface AddActivityInput {
 export function useWeekActivities(weekMonday: Date) {
   const { session } = useAuth();
   const [dbActivities, setDbActivities] = useState<DbActivity[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const startDate = formatISODate(weekMonday);
@@ -94,29 +94,31 @@ export function useWeekActivities(weekMonday: Date) {
     ),
   );
 
+  const requestKey = `${startDate}:${endDate}`;
+  const loading = loadedKey !== requestKey;
+
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError(null);
 
     fetchActivities(startDate, endDate)
       .then((data) => {
         if (!cancelled) {
           setDbActivities(data);
-          setLoading(false);
+          setError(null);
+          setLoadedKey(requestKey);
         }
       })
       .catch((err) => {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : String(err));
-          setLoading(false);
+          setLoadedKey(requestKey);
         }
       });
 
     return () => {
       cancelled = true;
     };
-  }, [startDate, endDate]);
+  }, [startDate, endDate, requestKey]);
 
   const columns = useMemo(
     () => groupActivitiesByDay(dbActivities, weekMonday),

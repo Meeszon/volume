@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useGoals } from "../../contexts/GoalsContext";
+import { useGoals } from "../../contexts/useGoals";
 import { SKILL_TREE } from "../../data/skillTree";
 import { findLeaf } from "../../lib/skillTreeLookup";
 import styles from "./SkillTreePage.module.css";

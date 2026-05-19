@@ -5,7 +5,8 @@ import { SkillTreePage } from "../features/skillTree/SkillTreePage";
 import { ActivitiesPage } from "../features/activities/ActivitiesPage";
 import { LoginPage } from "../features/auth/LoginPage";
 import { GoalsProvider } from "../contexts/GoalsContext";
-import { AuthProvider, useAuth } from "../contexts/AuthContext";
+import { AuthProvider } from "../contexts/AuthContext";
+import { useAuth } from "../contexts/useAuth";
 import styles from "./App.module.css";
 
 function AuthenticatedApp() {

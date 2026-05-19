@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { useGoals } from "../../contexts/GoalsContext";
+import { useGoals } from "../../contexts/useGoals";
 import type { TreeLeaf } from "../../types";
 import styles from "./SkillDetailPanel.module.css";
 

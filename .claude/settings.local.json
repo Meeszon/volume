@@ -47,7 +47,8 @@
       "Bash(Sort-Object)",
       "Bash(dir /B)",
       "Skill(to-prd)",
-      "Skill(to-issues)"
+      "Skill(to-issues)",
+      "Bash(gh run *)"
     ]
   }
 }

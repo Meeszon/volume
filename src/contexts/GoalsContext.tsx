@@ -1,17 +1,9 @@
-import { createContext, useContext, useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import type { Goal } from "../types";
+import { GoalsContext } from "./useGoals";
 
 const STORAGE_KEY = "volume:goals";
 const MAX_GOALS = 5;
-
-interface GoalsContextValue {
-  goals: Goal[];
-  addGoal: (leafId: string) => void;
-  removeGoal: (leafId: string) => void;
-  isGoal: (leafId: string) => boolean;
-}
-
-const GoalsContext = createContext<GoalsContextValue | null>(null);
 
 function loadGoals(): Goal[] {
   try {
@@ -66,10 +58,4 @@ export function GoalsProvider({ children }: { children: React.ReactNode }) {
       {children}
     </GoalsContext.Provider>
   );
-}
-
-export function useGoals(): GoalsContextValue {
-  const ctx = useContext(GoalsContext);
-  if (!ctx) throw new Error("useGoals must be used within GoalsProvider");
-  return ctx;
 }
