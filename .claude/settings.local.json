@@ -53,7 +53,12 @@
       "Read(//c/Users/meesz/Downloads/**)",
       "Read(//c/Users/meesz/**)",
       "Bash(dir *)",
-      "PowerShell(Expand-Archive *)"
+      "PowerShell(Expand-Archive *)",
+      "PowerShell(npx vitest run src/features/schedule/ActivityCard.test.tsx --reporter=default 2>&1 | Select-Object -Last 50)",
+      "PowerShell(npx vitest run src/features/schedule --reporter=default 2>&1 | Select-Object -Last 30)",
+      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -Last 20)",
+      "PowerShell(npx vitest run --reporter=default 2>&1 | Select-Object -Last 60)",
+      "PowerShell(npx vitest run src/hooks/useWeekActivities.test.ts --reporter=default 2>&1 | Select-Object -Last 20)"
     ]
   }
 }

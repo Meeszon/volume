@@ -44,6 +44,7 @@ function makeDbActivity(overrides: Partial<DbActivity> = {}): DbActivity {
     kind: "climb",
     intent_leaf_id: "footwork",
     block: null,
+    duration_minutes: null,
     order: 0,
     created_at: "2026-04-27T00:00:00Z",
     ...overrides,
@@ -146,6 +147,7 @@ describe("useWeekActivities", () => {
           kind: "climb",
           intentLeafId: "footwork",
           block: null,
+          durationMinutes: 90,
         });
       });
 
@@ -170,6 +172,7 @@ describe("useWeekActivities", () => {
           kind: "climb",
           intentLeafId: "footwork",
           block: null,
+          durationMinutes: 90,
         });
       });
 
@@ -180,6 +183,7 @@ describe("useWeekActivities", () => {
           kind: "climb",
           intent_leaf_id: "footwork",
           block: null,
+          duration_minutes: 90,
           order: 0,
         }),
       );
@@ -197,6 +201,7 @@ describe("useWeekActivities", () => {
           kind: "climb",
           intentLeafId: "footwork",
           block: null,
+          durationMinutes: 90,
         });
       });
 

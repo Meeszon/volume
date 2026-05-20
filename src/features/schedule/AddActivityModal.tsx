@@ -1,11 +1,15 @@
 import { useState } from "react";
 import { KIND_CONFIG } from "../../data/kindConfig";
 import { warmupLibrary } from "../../data/warmupLibrary";
-import { getIntentLeaf } from "../../lib/intentResolver";
+import { getIntentLeaf, intentLabel } from "../../lib/intentResolver";
 import { useRecentIntents } from "../../hooks/useRecentIntents";
 import { IntentPickerModal } from "./IntentPickerModal";
 import { BlockListPicker } from "./BlockListPicker";
 import { BlockEditor } from "./BlockEditor";
+import {
+  DurationPickerModal,
+  type DurationMinutes,
+} from "./DurationPickerModal";
 import { hexPoints } from "../../utils/hex";
 import type { Block, Kind, TreeLeaf } from "../../types";
 import type { AddActivityInput } from "../../hooks/useWeekActivities";
@@ -45,13 +49,24 @@ export function AddActivityModal({
   onAdd,
 }: AddActivityModalProps) {
   const [pickedKind, setPickedKind] = useState<Kind | null>(null);
+  const [climbLeafId, setClimbLeafId] = useState<string | null>(null);
   const [trainLeaf, setTrainLeaf] = useState<TreeLeaf | null>(null);
   const [pickedBlock, setPickedBlock] = useState<Block | null>(null);
   const { recents, recordPick } = useRecentIntents();
 
   const handleClimbIntentSelected = (leafId: string) => {
     recordPick(leafId);
-    onAdd({ kind: "climb", intentLeafId: leafId, block: null });
+    setClimbLeafId(leafId);
+  };
+
+  const handleClimbDurationSelected = (minutes: DurationMinutes) => {
+    if (!climbLeafId) return;
+    onAdd({
+      kind: "climb",
+      intentLeafId: climbLeafId,
+      block: null,
+      durationMinutes: minutes,
+    });
     onClose();
   };
 
@@ -63,17 +78,38 @@ export function AddActivityModal({
   };
 
   const handleWarmupSubmit = (block: Block) => {
-    onAdd({ kind: "warmup", intentLeafId: null, block });
+    onAdd({
+      kind: "warmup",
+      intentLeafId: null,
+      block,
+      durationMinutes: null,
+    });
     onClose();
   };
 
   const handleTrainSubmit = (block: Block) => {
     if (!trainLeaf) return;
-    onAdd({ kind: "train", intentLeafId: trainLeaf.id, block });
+    onAdd({
+      kind: "train",
+      intentLeafId: trainLeaf.id,
+      block,
+      durationMinutes: null,
+    });
     onClose();
   };
 
   if (pickedKind === "climb") {
+    if (climbLeafId) {
+      return (
+        <DurationPickerModal
+          dayLabel={dayLabel}
+          intentLabel={intentLabel(climbLeafId)}
+          onClose={onClose}
+          onBack={() => setClimbLeafId(null)}
+          onSelect={handleClimbDurationSelected}
+        />
+      );
+    }
     return (
       <IntentPickerModal
         dayLabel={dayLabel}

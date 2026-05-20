@@ -3,7 +3,6 @@ import type { CSSProperties } from "react";
 import type { DraggableProvided, DraggableStateSnapshot } from "@hello-pangea/dnd";
 import type { Activity } from "../../types";
 import { TrashIcon, CheckIcon } from "../../components/icons";
-import { KIND_CONFIG } from "../../data/kindConfig";
 import { intentLabel } from "../../lib/intentResolver";
 import { getActivityCategoryColor } from "../../lib/categoryColor";
 import styles from "./schedule.module.css";
@@ -17,6 +16,13 @@ interface ActivityCardProps {
   isLogged: boolean;
 }
 
+function formatTag(task: Activity): string | null {
+  if (task.kind !== "climb") return null;
+  if (task.durationMinutes == null) return null;
+  const hours = task.durationMinutes / 60;
+  return `${hours}h`;
+}
+
 export function ActivityCard({
   task,
   provided,
@@ -26,11 +32,11 @@ export function ActivityCard({
   isLogged,
 }: ActivityCardProps) {
   const [confirming, setConfirming] = useState(false);
-  const kindCfg = KIND_CONFIG[task.kind];
-  const intent =
-    task.kind === "warmup"
-      ? (task.block?.name ?? "")
-      : intentLabel(task.intentLeafId);
+  const intent = intentLabel(task.intentLeafId);
+  const eyebrow = task.kind === "warmup" ? "Warmup" : intent;
+  const main =
+    task.kind === "climb" ? "Climbing Session" : (task.block?.name ?? "");
+  const tag = formatTag(task);
   const cat = getActivityCategoryColor(task);
 
   const cardStyle: CSSProperties = {
@@ -58,8 +64,8 @@ export function ActivityCard({
       <div className={styles.cardStrip} />
       <div className={styles.cardBody}>
         <div className={styles.cardEyebrow}>
-          <span className={styles.cardKind} data-testid="kind-chip">
-            {kindCfg.label.toUpperCase()}
+          <span className={styles.cardKind} data-testid="eyebrow-chip">
+            {eyebrow}
           </span>
           <span className={styles.cardEyebrowRight}>
             {isLogged && (
@@ -71,9 +77,14 @@ export function ActivityCard({
                 <CheckIcon />
               </span>
             )}
+            {tag && (
+              <span className={styles.cardTag} data-testid="card-tag">
+                {tag}
+              </span>
+            )}
           </span>
         </div>
-        {intent && <div className={styles.cardIntent}>{intent}</div>}
+        {main && <div className={styles.cardIntent}>{main}</div>}
       </div>
 
       <div className={styles.cardMenu}>

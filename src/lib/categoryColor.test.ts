@@ -4,7 +4,7 @@ import { CATEGORY_COLORS } from "../data/skillTree";
 import { JUST_CLIMBING_LEAF_ID } from "../data/syntheticIntents";
 import type { Activity } from "../types";
 
-const base = { id: "a", block: null } as const;
+const base = { id: "a", block: null, durationMinutes: null } as const;
 
 describe("getActivityCategoryColor", () => {
   it("returns the category color for a Train activity with a real leaf", () => {

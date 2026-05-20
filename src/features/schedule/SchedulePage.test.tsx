@@ -78,6 +78,7 @@ describe("SchedulePage", () => {
           kind: "climb",
           intentLeafId: "footwork",
           block: null,
+          durationMinutes: 90,
         },
       ],
     };
@@ -159,7 +160,7 @@ describe("SchedulePage", () => {
       expect(screen.getByText(/Add Activity —/)).toBeTruthy();
     });
 
-    it("completing the Climb flow calls addActivity and closes the modal", async () => {
+    it("completing the Climb flow (intent → duration) calls addActivity and closes the modal", async () => {
       const user = userEvent.setup();
       renderSchedule();
 
@@ -169,10 +170,16 @@ describe("SchedulePage", () => {
       await user.click(screen.getByRole("button", { name: /^climb$/i }));
       await user.click(screen.getByRole("button", { name: /^technique$/i }));
       await user.click(screen.getByRole("button", { name: /^footwork$/i }));
+      await user.click(screen.getByTestId("duration-option-90"));
 
       expect(mockAddActivity).toHaveBeenCalledWith(
         expect.any(String),
-        { kind: "climb", intentLeafId: "footwork", block: null },
+        {
+          kind: "climb",
+          intentLeafId: "footwork",
+          block: null,
+          durationMinutes: 90,
+        },
       );
       expect(screen.queryByTestId("modal-overlay")).toBeNull();
     });

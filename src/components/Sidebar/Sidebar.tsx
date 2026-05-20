@@ -4,7 +4,6 @@ import styles from "./Sidebar.module.css";
 
 const NAV_ITEMS = [
   { to: "/schedule", label: "Schedule" },
-  { to: "/activities", label: "Activities" },
   { to: "/goals", label: "Skill Tree" },
 ] as const;
 

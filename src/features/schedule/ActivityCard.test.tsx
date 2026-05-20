@@ -14,6 +14,7 @@ const task: Activity = {
   kind: "climb",
   intentLeafId: "footwork",
   block: null,
+  durationMinutes: 90,
 };
 
 const provided = {
@@ -44,27 +45,19 @@ function renderCard(
 }
 
 describe("ActivityCard", () => {
-  it("renders the KIND eyebrow in uppercase", () => {
+  it("renders the intent in the eyebrow and 'Climbing Session' as the main label for Climb", () => {
     renderCard();
-    expect(screen.getByTestId("kind-chip").textContent).toBe("CLIMB");
+    expect(screen.getByTestId("eyebrow-chip").textContent).toBe("Footwork");
+    expect(screen.getByText("Climbing Session")).toBeTruthy();
   });
 
-  it("renders the intent leaf label", () => {
-    renderCard();
-    expect(screen.getByText("Footwork")).toBeTruthy();
-  });
-
-  it("renders 'Just Climbing' for the synthetic intent", () => {
+  it("renders 'Just Climbing' in the eyebrow for the synthetic intent", () => {
     renderCard({ intentLeafId: JUST_CLIMBING_LEAF_ID });
-    expect(screen.getByText("Just Climbing")).toBeTruthy();
+    expect(screen.getByTestId("eyebrow-chip").textContent).toBe("Just Climbing");
+    expect(screen.getByText("Climbing Session")).toBeTruthy();
   });
 
-  it("does not render an intent label when intentLeafId is null", () => {
-    renderCard({ kind: "warmup", intentLeafId: null });
-    expect(screen.queryByText("Footwork")).toBeNull();
-  });
-
-  it("renders the block name as the main label for Warmup", () => {
+  it("renders 'Warmup' in the eyebrow and the block name as the main label for Warmup", () => {
     renderCard({
       kind: "warmup",
       intentLeafId: null,
@@ -75,11 +68,11 @@ describe("ActivityCard", () => {
         ],
       },
     });
-    expect(screen.getByTestId("kind-chip").textContent).toBe("WARMUP");
+    expect(screen.getByTestId("eyebrow-chip").textContent).toBe("Warmup");
     expect(screen.getByText("General Warmup")).toBeTruthy();
   });
 
-  it("renders the intent label (not block name) for Train", () => {
+  it("renders the intent in the eyebrow and the block name as the main label for Train", () => {
     renderCard({
       kind: "train",
       intentLeafId: "finger-strength",
@@ -90,8 +83,53 @@ describe("ActivityCard", () => {
         ],
       },
     });
-    expect(screen.getByTestId("kind-chip").textContent).toBe("TRAIN");
-    expect(screen.getByText("Finger Strength")).toBeTruthy();
+    expect(screen.getByTestId("eyebrow-chip").textContent).toBe("Finger Strength");
+    expect(screen.getByText("Max Hangs")).toBeTruthy();
+  });
+
+  it("renders the duration as the top-right tag for Climb (90 min → 1.5h)", () => {
+    renderCard();
+    expect(screen.getByTestId("card-tag").textContent).toBe("1.5h");
+  });
+
+  it("renders the duration as a whole-hour value for Climb (120 min → 2h)", () => {
+    renderCard({ durationMinutes: 120 });
+    expect(screen.getByTestId("card-tag").textContent).toBe("2h");
+  });
+
+  it("does not render a tag for a Climb with no duration", () => {
+    renderCard({ durationMinutes: null });
+    expect(screen.queryByTestId("card-tag")).toBeNull();
+  });
+
+  it("does not render a tag for Warmup", () => {
+    renderCard({
+      kind: "warmup",
+      intentLeafId: null,
+      durationMinutes: null,
+      block: {
+        name: "General Warmup",
+        exercises: [
+          { name: "Easy Cardio", sets: 1, value: 300, unit: "seconds", rest: 30 },
+        ],
+      },
+    });
+    expect(screen.queryByTestId("card-tag")).toBeNull();
+  });
+
+  it("does not render a tag for Train", () => {
+    renderCard({
+      kind: "train",
+      intentLeafId: "finger-strength",
+      durationMinutes: null,
+      block: {
+        name: "Max Hangs",
+        exercises: [
+          { name: "Max Recruitment Hang", sets: 3, value: 8, unit: "seconds", rest: 300 },
+        ],
+      },
+    });
+    expect(screen.queryByTestId("card-tag")).toBeNull();
   });
 
   it("renders the inline logged check when isLogged is true", () => {

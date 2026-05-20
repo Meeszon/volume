@@ -44,6 +44,7 @@ function dbActivityToUi(dbAct: DbActivity): Activity | null {
     kind: dbAct.kind,
     intentLeafId: dbAct.intent_leaf_id,
     block: dbAct.block,
+    durationMinutes: dbAct.duration_minutes ?? null,
   };
 }
 
@@ -75,6 +76,7 @@ export interface AddActivityInput {
   kind: Kind;
   intentLeafId: string | null;
   block: Block | null;
+  durationMinutes: number | null;
 }
 
 export function useWeekActivities(weekMonday: Date) {
@@ -142,6 +144,7 @@ export function useWeekActivities(weekMonday: Date) {
         kind: input.kind,
         intent_leaf_id: input.intentLeafId,
         block: input.block,
+        duration_minutes: input.durationMinutes,
         order,
         created_at: new Date().toISOString(),
       };
@@ -155,6 +158,7 @@ export function useWeekActivities(weekMonday: Date) {
           kind: input.kind,
           intent_leaf_id: input.intentLeafId,
           block: input.block,
+          duration_minutes: input.durationMinutes,
           order,
         });
         setDbActivities((prev) =>
@@ -200,6 +204,7 @@ export function useWeekActivities(weekMonday: Date) {
       const sourceDay = source.droppableId;
       const destDay = destination.droppableId;
       const movedActivityId = columns[sourceDay][source.index].id;
+      if (movedActivityId.startsWith("temp-")) return;
       const prev = dbActivities;
       const sameDay = sourceDay === destDay;
       const sourceDateStr = dayIdToISODate(sourceDay, weekMonday);
