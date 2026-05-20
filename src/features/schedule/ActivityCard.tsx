@@ -3,9 +3,7 @@ import type { DraggableProvided, DraggableStateSnapshot } from "@hello-pangea/dn
 import type { Activity } from "../../types";
 import { TrashIcon, CheckIcon } from "../../components/icons";
 import { KIND_CONFIG } from "../../data/kindConfig";
-import { SKILL_TREE } from "../../data/skillTree";
-import { findLeaf } from "../../lib/skillTreeLookup";
-import { JUST_CLIMBING_LEAF, JUST_CLIMBING_LEAF_ID } from "../../data/syntheticIntents";
+import { intentLabel } from "../../lib/intentResolver";
 import styles from "./schedule.module.css";
 
 interface ActivityCardProps {
@@ -15,12 +13,6 @@ interface ActivityCardProps {
   onDelete: (activityId: string) => void;
   onOpenPanel: (activity: Activity) => void;
   isLogged: boolean;
-}
-
-function intentLabel(intentLeafId: string | null): string {
-  if (!intentLeafId) return "";
-  if (intentLeafId === JUST_CLIMBING_LEAF_ID) return JUST_CLIMBING_LEAF.label;
-  return findLeaf(SKILL_TREE, intentLeafId)?.label ?? intentLeafId;
 }
 
 export function ActivityCard({
@@ -33,7 +25,10 @@ export function ActivityCard({
 }: ActivityCardProps) {
   const [confirming, setConfirming] = useState(false);
   const kindCfg = KIND_CONFIG[task.kind];
-  const label = intentLabel(task.intentLeafId);
+  const subtitle =
+    task.kind === "warmup"
+      ? (task.block?.name ?? "")
+      : intentLabel(task.intentLeafId);
 
   return (
     <div
@@ -62,7 +57,7 @@ export function ActivityCard({
         >
           {kindCfg.label}
         </span>
-        {label && <span className={styles.cardSubtitle}>{label}</span>}
+        {subtitle && <span className={styles.cardSubtitle}>{subtitle}</span>}
       </div>
 
       {isLogged && !confirming && (

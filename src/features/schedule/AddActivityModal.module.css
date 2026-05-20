@@ -77,27 +77,16 @@
     transform 0.15s ease;
 }
 
-.categoryBtn.enabled:hover {
+.categoryBtn:hover {
   background-color: #fafafa;
   border-color: #c4c3c0;
   transform: translateY(-1px);
-}
-
-.categoryBtn.disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
 }
 
 .categoryLabel {
   font-size: 13px;
   font-weight: 600;
   color: #413f39;
-}
-
-.exerciseList {
-  font-size: 11px;
-  color: #9d9c99;
-  line-height: 1.4;
 }
 
 .hexMarker {

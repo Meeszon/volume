@@ -66,6 +66,16 @@ export const SKILL_TREE: TreeNode[] = [
           { name: "Pigeon Pose", detail: "2 min each side · post-session cool-down" },
           { name: "High Foot Problems", detail: "5 problems with high foot placements · 3 attempts each" },
         ],
+        blocks: [
+          {
+            name: "Hip Mobility Flow",
+            exercises: [
+              { name: "90/90 Hip Stretch", sets: 2, value: 60, unit: "seconds", rest: 30 },
+              { name: "Cossack Squat", sets: 3, value: 8, unit: "reps", rest: 45 },
+              { name: "Pigeon Pose", sets: 2, value: 90, unit: "seconds", rest: 30 },
+            ],
+          },
+        ],
       },
       {
         id: "ankle-calf-flexibility",
@@ -78,6 +88,16 @@ export const SKILL_TREE: TreeNode[] = [
           { name: "Heel-Down Slab", detail: "Slab climbing maintaining heel contact on footholds" },
           { name: "Dorsiflexion Drills", detail: "Kneel and rock forward onto toes · 10 reps × 3 sets" },
         ],
+        blocks: [
+          {
+            name: "Ankle & Calf Routine",
+            exercises: [
+              { name: "Toe-up Wall Stretch", sets: 2, value: 120, unit: "seconds", rest: 30 },
+              { name: "Eccentric Calf Raises", sets: 3, value: 12, unit: "reps", rest: 60 },
+              { name: "Dorsiflexion Drills", sets: 3, value: 10, unit: "reps", rest: 30 },
+            ],
+          },
+        ],
       },
       {
         id: "shoulder-mobility",
@@ -89,6 +109,16 @@ export const SKILL_TREE: TreeNode[] = [
           { name: "Thoracic Rotations", detail: "Seated twists · 10 reps each side × 3" },
           { name: "Doorframe Chest Opener", detail: "30s hold each arm · 3 sets" },
           { name: "Lat Stretch", detail: "1 min each side · arm overhead against wall" },
+        ],
+        blocks: [
+          {
+            name: "Shoulder Prehab",
+            exercises: [
+              { name: "Shoulder Dislocations", sets: 3, value: 10, unit: "reps", rest: 30 },
+              { name: "Thoracic Rotations", sets: 3, value: 10, unit: "reps", rest: 30 },
+              { name: "Doorframe Chest Opener", sets: 3, value: 30, unit: "seconds", rest: 30 },
+            ],
+          },
         ],
       },
     ],
@@ -162,6 +192,20 @@ export const SKILL_TREE: TreeNode[] = [
           { name: "Max Recruitment Hangs", detail: "Added weight · 6–10s · full rest between · 3 sets" },
           { name: "Limit Crimp Problems", detail: "Climb at or above your crimp grade ceiling · 45 min" },
         ],
+        blocks: [
+          {
+            name: "Half-Crimp Hangs",
+            exercises: [
+              { name: "Half-Crimp Hang (20mm)", sets: 5, value: 10, unit: "seconds", rest: 180 },
+            ],
+          },
+          {
+            name: "Max Recruitment",
+            exercises: [
+              { name: "Max Recruitment Hang", sets: 3, value: 7, unit: "seconds", rest: 300 },
+            ],
+          },
+        ],
       },
       {
         id: "pinches",
@@ -173,6 +217,20 @@ export const SKILL_TREE: TreeNode[] = [
           { name: "Pinch Repeaters", detail: "7s on / 3s off × 6 reps · vary grip width · 2 sets" },
           { name: "Pinch Problems", detail: "5 problems with pinch sequences · 3× each" },
           { name: "Thumb Opposition Drills", detail: "Focus on pressing thumb against fingers on each pinch hold" },
+        ],
+        blocks: [
+          {
+            name: "Pinch Block Holds",
+            exercises: [
+              { name: "Pinch Block Hold", sets: 4, value: 10, unit: "seconds", rest: 120 },
+            ],
+          },
+          {
+            name: "Pinch Repeaters",
+            exercises: [
+              { name: "Pinch Repeater (7-on/3-off)", sets: 2, value: 6, unit: "reps", rest: 180 },
+            ],
+          },
         ],
       },
     ],
@@ -192,6 +250,16 @@ export const SKILL_TREE: TreeNode[] = [
           { name: "Front Lever Progressions", detail: "Tuck → advanced tuck → straddle · 5–8s holds · 3 sets" },
           { name: "Compression Problems", detail: "5 problems using compression technique · 3 attempts each" },
         ],
+        blocks: [
+          {
+            name: "Core Circuit",
+            exercises: [
+              { name: "Hollow Body Hold", sets: 3, value: 25, unit: "seconds", rest: 60 },
+              { name: "Hanging Knee Raise", sets: 3, value: 10, unit: "reps", rest: 60 },
+              { name: "Front Lever Progression", sets: 3, value: 7, unit: "seconds", rest: 90 },
+            ],
+          },
+        ],
       },
       {
         id: "finger-strength",
@@ -203,6 +271,26 @@ export const SKILL_TREE: TreeNode[] = [
           { name: "Max Recruitment Hangs", detail: "Added weight · 6–10s · full rest between · 3 sets" },
           { name: "Minimum Edge", detail: "Find smallest edge you can hang 10s · shrink each week" },
           { name: "Open-hand Capacity", detail: "Build open-hand strength — avoid full crimp on moderate holds" },
+        ],
+        blocks: [
+          {
+            name: "Hangboard Repeaters",
+            exercises: [
+              { name: "Hangboard Repeater (7-on/3-off)", sets: 2, value: 6, unit: "reps", rest: 180 },
+            ],
+          },
+          {
+            name: "Max Hangs",
+            exercises: [
+              { name: "Max Recruitment Hang", sets: 3, value: 8, unit: "seconds", rest: 300 },
+            ],
+          },
+          {
+            name: "Minimum Edge",
+            exercises: [
+              { name: "Minimum Edge Hang", sets: 4, value: 10, unit: "seconds", rest: 180 },
+            ],
+          },
         ],
       },
       {
@@ -216,6 +304,20 @@ export const SKILL_TREE: TreeNode[] = [
           { name: "Linked Sequences", detail: "Connect 4 moderate problems without rest · 3 rounds" },
           { name: "Campus Laddering", detail: "Consecutive rung movements · 3 sets of max rungs" },
         ],
+        blocks: [
+          {
+            name: "Campus Laddering",
+            exercises: [
+              { name: "Campus Ladder", sets: 3, value: 8, unit: "reps", rest: 180 },
+            ],
+          },
+          {
+            name: "ARC Training",
+            exercises: [
+              { name: "Easy Continuous Climbing", sets: 1, value: 1800, unit: "seconds", rest: 0 },
+            ],
+          },
+        ],
       },
       {
         id: "antagonist-training",
@@ -227,6 +329,16 @@ export const SKILL_TREE: TreeNode[] = [
           { name: "Reverse Wrist Curls", detail: "2 kg · 15 reps × 3 sets · after climbing sessions" },
           { name: "Band Pull-aparts", detail: "20 reps × 3 sets · scapular health focus" },
           { name: "Shoulder Press", detail: "3 × 8 reps · rotator cuff prehab emphasis" },
+        ],
+        blocks: [
+          {
+            name: "Antagonist Circuit",
+            exercises: [
+              { name: "Push-up", sets: 3, value: 12, unit: "reps", rest: 60 },
+              { name: "Reverse Wrist Curls", sets: 3, value: 15, unit: "reps", rest: 60 },
+              { name: "Band Pull-apart", sets: 3, value: 20, unit: "reps", rest: 45 },
+            ],
+          },
         ],
       },
     ],

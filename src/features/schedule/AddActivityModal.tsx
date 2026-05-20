@@ -1,9 +1,13 @@
 import { useState } from "react";
 import { KIND_CONFIG } from "../../data/kindConfig";
+import { warmupLibrary } from "../../data/warmupLibrary";
+import { getIntentLeaf } from "../../lib/intentResolver";
 import { useRecentIntents } from "../../hooks/useRecentIntents";
 import { IntentPickerModal } from "./IntentPickerModal";
+import { BlockListPicker } from "./BlockListPicker";
+import { BlockEditor } from "./BlockEditor";
 import { hexPoints } from "../../utils/hex";
-import type { Kind } from "../../types";
+import type { Block, Kind, TreeLeaf } from "../../types";
 import type { AddActivityInput } from "../../hooks/useWeekActivities";
 import styles from "./AddActivityModal.module.css";
 
@@ -14,7 +18,6 @@ interface AddActivityModalProps {
 }
 
 const KIND_ORDER: Kind[] = ["climb", "warmup", "train"];
-const ENABLED_KINDS: Kind[] = ["climb"];
 
 function CoordHex({ color }: { color: string }) {
   const size = 28;
@@ -36,18 +39,37 @@ function CoordHex({ color }: { color: string }) {
   );
 }
 
-export function AddActivityModal({ dayLabel, onClose, onAdd }: AddActivityModalProps) {
+export function AddActivityModal({
+  dayLabel,
+  onClose,
+  onAdd,
+}: AddActivityModalProps) {
   const [pickedKind, setPickedKind] = useState<Kind | null>(null);
+  const [trainLeaf, setTrainLeaf] = useState<TreeLeaf | null>(null);
+  const [pickedBlock, setPickedBlock] = useState<Block | null>(null);
   const { recents, recordPick } = useRecentIntents();
-
-  const handleSelectKind = (kind: Kind) => {
-    if (!ENABLED_KINDS.includes(kind)) return;
-    setPickedKind(kind);
-  };
 
   const handleClimbIntentSelected = (leafId: string) => {
     recordPick(leafId);
     onAdd({ kind: "climb", intentLeafId: leafId, block: null });
+    onClose();
+  };
+
+  const handleTrainIntentSelected = (leafId: string) => {
+    const leaf = getIntentLeaf(leafId);
+    if (!leaf) return;
+    recordPick(leafId);
+    setTrainLeaf(leaf);
+  };
+
+  const handleWarmupSubmit = (block: Block) => {
+    onAdd({ kind: "warmup", intentLeafId: null, block });
+    onClose();
+  };
+
+  const handleTrainSubmit = (block: Block) => {
+    if (!trainLeaf) return;
+    onAdd({ kind: "train", intentLeafId: trainLeaf.id, block });
     onClose();
   };
 
@@ -59,6 +81,67 @@ export function AddActivityModal({ dayLabel, onClose, onAdd }: AddActivityModalP
         recentIds={recents}
         onClose={onClose}
         onSelect={handleClimbIntentSelected}
+      />
+    );
+  }
+
+  if (pickedKind === "warmup") {
+    if (pickedBlock) {
+      return (
+        <BlockEditor
+          dayLabel={dayLabel}
+          kindLabel={KIND_CONFIG.warmup.label}
+          block={pickedBlock}
+          onBack={() => setPickedBlock(null)}
+          onClose={onClose}
+          onSubmit={handleWarmupSubmit}
+        />
+      );
+    }
+    return (
+      <BlockListPicker
+        title={`Add Warmup — ${dayLabel}`}
+        blocks={warmupLibrary}
+        onSelect={setPickedBlock}
+        onClose={onClose}
+      />
+    );
+  }
+
+  if (pickedKind === "train") {
+    if (trainLeaf && pickedBlock) {
+      return (
+        <BlockEditor
+          dayLabel={dayLabel}
+          kindLabel={KIND_CONFIG.train.label}
+          block={pickedBlock}
+          onBack={() => setPickedBlock(null)}
+          onClose={onClose}
+          onSubmit={handleTrainSubmit}
+        />
+      );
+    }
+    if (trainLeaf) {
+      return (
+        <BlockListPicker
+          title={`Add Train · Block — ${dayLabel}`}
+          subTitle={trainLeaf.label}
+          blocks={trainLeaf.blocks ?? []}
+          onSelect={setPickedBlock}
+          onBack={() => setTrainLeaf(null)}
+          backLabel="Back to intent"
+          onClose={onClose}
+          emptyMessage={`No blocks defined for ${trainLeaf.label}.`}
+        />
+      );
+    }
+    return (
+      <IntentPickerModal
+        dayLabel={dayLabel}
+        kind="train"
+        recentIds={recents}
+        onClose={onClose}
+        onSelect={handleTrainIntentSelected}
       />
     );
   }
@@ -81,22 +164,16 @@ export function AddActivityModal({ dayLabel, onClose, onAdd }: AddActivityModalP
         <div className={styles.categoryGrid}>
           {KIND_ORDER.map((kind) => {
             const cfg = KIND_CONFIG[kind];
-            const enabled = ENABLED_KINDS.includes(kind);
             return (
               <button
                 type="button"
                 key={kind}
-                className={`${styles.categoryBtn} ${enabled ? styles.enabled : styles.disabled}`}
-                onClick={() => handleSelectKind(kind)}
-                disabled={!enabled}
-                aria-disabled={!enabled}
+                className={styles.categoryBtn}
+                onClick={() => setPickedKind(kind)}
                 aria-label={cfg.label}
               >
                 <CoordHex color={cfg.color} />
                 <span className={styles.categoryLabel}>{cfg.label}</span>
-                {!enabled && (
-                  <span className={styles.exerciseList}>Coming soon</span>
-                )}
               </button>
             );
           })}

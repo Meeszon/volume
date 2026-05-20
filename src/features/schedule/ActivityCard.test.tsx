@@ -59,6 +59,36 @@ describe("ActivityCard", () => {
     expect(screen.queryByText("Footwork")).toBeNull();
   });
 
+  it("renders the block name as subtitle for Warmup", () => {
+    renderCard({
+      kind: "warmup",
+      intentLeafId: null,
+      block: {
+        name: "General Warmup",
+        exercises: [
+          { name: "Easy Cardio", sets: 1, value: 300, unit: "seconds", rest: 30 },
+        ],
+      },
+    });
+    expect(screen.getByTestId("kind-chip").textContent).toBe("Warmup");
+    expect(screen.getByText("General Warmup")).toBeTruthy();
+  });
+
+  it("renders the intent label (not block name) for Train", () => {
+    renderCard({
+      kind: "train",
+      intentLeafId: "finger-strength",
+      block: {
+        name: "Max Hangs",
+        exercises: [
+          { name: "Max Recruitment Hang", sets: 3, value: 8, unit: "seconds", rest: 300 },
+        ],
+      },
+    });
+    expect(screen.getByTestId("kind-chip").textContent).toBe("Train");
+    expect(screen.getByText("Finger Strength")).toBeTruthy();
+  });
+
   it("shows a delete button", () => {
     renderCard();
     expect(screen.getByRole("button", { name: /delete/i })).toBeTruthy();

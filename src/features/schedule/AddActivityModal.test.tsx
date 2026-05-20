@@ -36,37 +36,18 @@ describe("AddActivityModal", () => {
       expect(screen.getByRole("button", { name: /train/i })).toBeTruthy();
     });
 
-    it("Warmup and Train are disabled with a 'Coming soon' hint", () => {
-      renderModal();
-      const warmup = screen.getByRole("button", { name: /warmup/i });
-      const train = screen.getByRole("button", { name: /train/i });
-      expect(warmup.getAttribute("aria-disabled")).toBe("true");
-      expect(train.getAttribute("aria-disabled")).toBe("true");
-      expect(screen.getAllByText(/coming soon/i).length).toBeGreaterThanOrEqual(2);
-    });
-
-    it("Climb is enabled and not coming-soon", () => {
+    it("all three Kinds are enabled", () => {
       renderModal();
       const climb = screen.getByRole("button", { name: /^climb$/i });
-      expect(climb.getAttribute("aria-disabled")).toBe("false");
-    });
-
-    it("clicking Warmup does not advance", async () => {
-      const user = userEvent.setup();
-      renderModal();
-      await user.click(screen.getByRole("button", { name: /warmup/i }));
-      expect(screen.queryByRole("tab", { name: /all/i })).toBeNull();
-    });
-
-    it("clicking Train does not advance", async () => {
-      const user = userEvent.setup();
-      renderModal();
-      await user.click(screen.getByRole("button", { name: /train/i }));
-      expect(screen.queryByRole("tab", { name: /all/i })).toBeNull();
+      const warmup = screen.getByRole("button", { name: /^warmup$/i });
+      const train = screen.getByRole("button", { name: /^train$/i });
+      expect(climb.getAttribute("aria-disabled")).not.toBe("true");
+      expect(warmup.getAttribute("aria-disabled")).not.toBe("true");
+      expect(train.getAttribute("aria-disabled")).not.toBe("true");
     });
   });
 
-  describe("Step 2: Climb Intent Picker handoff", () => {
+  describe("Climb flow", () => {
     async function gotoClimbIntent() {
       const user = userEvent.setup();
       renderModal();
@@ -112,6 +93,151 @@ describe("AddActivityModal", () => {
       const stored = localStorage.getItem("volume:recentIntents");
       expect(stored).not.toBeNull();
       expect(JSON.parse(stored as string)).toContain("footwork");
+    });
+  });
+
+  describe("Warmup flow", () => {
+    async function gotoWarmupPicker() {
+      const user = userEvent.setup();
+      renderModal();
+      await user.click(screen.getByRole("button", { name: /^warmup$/i }));
+      return user;
+    }
+
+    it("Warmup opens the WarmupPicker, not an Intent picker", async () => {
+      await gotoWarmupPicker();
+      expect(screen.getByText(/add warmup —/i)).toBeTruthy();
+      // No Intent tabs in Warmup flow
+      expect(screen.queryByRole("tab", { name: /all/i })).toBeNull();
+    });
+
+    it("WarmupPicker lists warmup library entries", async () => {
+      await gotoWarmupPicker();
+      expect(screen.getByRole("button", { name: /general warmup/i })).toBeTruthy();
+      expect(screen.getByRole("button", { name: /wall warmup/i })).toBeTruthy();
+      expect(screen.getByRole("button", { name: /finger warmup/i })).toBeTruthy();
+    });
+
+    it("picking a warmup block advances to the BlockEditor", async () => {
+      const user = await gotoWarmupPicker();
+      await user.click(screen.getByRole("button", { name: /general warmup/i }));
+      expect(screen.getByText(/add warmup · general warmup/i)).toBeTruthy();
+      expect(screen.getByRole("button", { name: /add activity/i })).toBeTruthy();
+    });
+
+    it("submitting the BlockEditor calls onAdd with kind=warmup and the edited block", async () => {
+      const user = await gotoWarmupPicker();
+      await user.click(screen.getByRole("button", { name: /general warmup/i }));
+
+      // Edit the first exercise's "Sets" field
+      const setsInputs = screen.getAllByLabelText(/sets/i);
+      await user.clear(setsInputs[0]);
+      await user.type(setsInputs[0], "2");
+
+      await user.click(screen.getByRole("button", { name: /add activity/i }));
+
+      expect(onAdd).toHaveBeenCalledTimes(1);
+      const call = (onAdd as unknown as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      expect(call.kind).toBe("warmup");
+      expect(call.intentLeafId).toBeNull();
+      expect(call.block).not.toBeNull();
+      expect(call.block.name).toBe("General Warmup");
+      expect(call.block.exercises[0].sets).toBe(2);
+      expect(onClose).toHaveBeenCalled();
+    });
+
+    it("Back button on the BlockEditor returns to the WarmupPicker", async () => {
+      const user = await gotoWarmupPicker();
+      await user.click(screen.getByRole("button", { name: /general warmup/i }));
+      await user.click(screen.getByRole("button", { name: /^back$/i }));
+      expect(screen.getByText(/add warmup —/i)).toBeTruthy();
+      expect(screen.getByRole("button", { name: /wall warmup/i })).toBeTruthy();
+    });
+  });
+
+  describe("Train flow", () => {
+    async function gotoTrainIntent() {
+      const user = userEvent.setup();
+      renderModal();
+      await user.click(screen.getByRole("button", { name: /^train$/i }));
+      return user;
+    }
+
+    it("Train opens the IntentPickerModal with kind=train (no Just-Climbing pin)", async () => {
+      await gotoTrainIntent();
+      expect(screen.getByText(/add train · intent/i)).toBeTruthy();
+      expect(screen.queryByRole("button", { name: /just climbing/i })).toBeNull();
+    });
+
+    it("only Train-allowed leaves are reachable", async () => {
+      const user = await gotoTrainIntent();
+      await user.click(screen.getByRole("button", { name: /^strength$/i }));
+      // Antagonist Training is train-only — appears for Train kind
+      expect(screen.getByRole("button", { name: /antagonist training/i })).toBeTruthy();
+      // Core Tension is both — also appears
+      expect(screen.getByRole("button", { name: /core tension/i })).toBeTruthy();
+    });
+
+    it("picking a Train leaf advances to the BlockPicker", async () => {
+      const user = await gotoTrainIntent();
+      await user.click(screen.getByRole("button", { name: /^strength$/i }));
+      await user.click(screen.getByRole("button", { name: /^finger strength$/i }));
+      expect(screen.getByText(/add train · block/i)).toBeTruthy();
+      // Finger Strength has multiple blocks
+      expect(screen.getByRole("button", { name: /hangboard repeaters/i })).toBeTruthy();
+      expect(screen.getByRole("button", { name: /max hangs/i })).toBeTruthy();
+    });
+
+    it("picking a Block advances to the BlockEditor", async () => {
+      const user = await gotoTrainIntent();
+      await user.click(screen.getByRole("button", { name: /^strength$/i }));
+      await user.click(screen.getByRole("button", { name: /^finger strength$/i }));
+      await user.click(screen.getByRole("button", { name: /max hangs/i }));
+      expect(screen.getByText(/add train · max hangs/i)).toBeTruthy();
+      expect(screen.getByRole("button", { name: /add activity/i })).toBeTruthy();
+    });
+
+    it("submitting calls onAdd with kind=train, the intent leaf, and the edited block", async () => {
+      const user = await gotoTrainIntent();
+      await user.click(screen.getByRole("button", { name: /^strength$/i }));
+      await user.click(screen.getByRole("button", { name: /^finger strength$/i }));
+      await user.click(screen.getByRole("button", { name: /max hangs/i }));
+
+      await user.click(screen.getByRole("button", { name: /add activity/i }));
+
+      expect(onAdd).toHaveBeenCalledTimes(1);
+      const call = (onAdd as unknown as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      expect(call.kind).toBe("train");
+      expect(call.intentLeafId).toBe("finger-strength");
+      expect(call.block).not.toBeNull();
+      expect(call.block.name).toBe("Max Hangs");
+      expect(onClose).toHaveBeenCalled();
+    });
+
+    it("BlockPicker Back returns to the IntentPickerModal", async () => {
+      const user = await gotoTrainIntent();
+      await user.click(screen.getByRole("button", { name: /^strength$/i }));
+      await user.click(screen.getByRole("button", { name: /^finger strength$/i }));
+      await user.click(screen.getByRole("button", { name: /back to intent/i }));
+      expect(screen.getByText(/add train · intent/i)).toBeTruthy();
+    });
+
+    it("BlockEditor Back returns to the BlockPicker", async () => {
+      const user = await gotoTrainIntent();
+      await user.click(screen.getByRole("button", { name: /^strength$/i }));
+      await user.click(screen.getByRole("button", { name: /^finger strength$/i }));
+      await user.click(screen.getByRole("button", { name: /max hangs/i }));
+      await user.click(screen.getByRole("button", { name: /^back$/i }));
+      expect(screen.getByText(/add train · block/i)).toBeTruthy();
+    });
+
+    it("records the picked Train intent in volume:recentIntents", async () => {
+      const user = await gotoTrainIntent();
+      await user.click(screen.getByRole("button", { name: /^strength$/i }));
+      await user.click(screen.getByRole("button", { name: /^finger strength$/i }));
+      const stored = localStorage.getItem("volume:recentIntents");
+      expect(stored).not.toBeNull();
+      expect(JSON.parse(stored as string)).toContain("finger-strength");
     });
   });
 

@@ -3,9 +3,8 @@ import { motion } from "framer-motion";
 import type { Activity } from "../../types";
 import type { LogData } from "../../hooks/useActivityLog";
 import { KIND_CONFIG } from "../../data/kindConfig";
-import { SKILL_TREE } from "../../data/skillTree";
-import { findLeaf } from "../../lib/skillTreeLookup";
-import { JUST_CLIMBING_LEAF, JUST_CLIMBING_LEAF_ID } from "../../data/syntheticIntents";
+import { intentLabel } from "../../lib/intentResolver";
+import { describeExercise } from "../../lib/block";
 import { XIcon, TrashIcon } from "../../components/icons";
 import styles from "./ActivityDetailPanel.module.css";
 
@@ -27,12 +26,6 @@ function initForm(logData: LogData | null): Record<string, string> {
   );
 }
 
-function intentLabel(intentLeafId: string | null): string {
-  if (!intentLeafId) return "";
-  if (intentLeafId === JUST_CLIMBING_LEAF_ID) return JUST_CLIMBING_LEAF.label;
-  return findLeaf(SKILL_TREE, intentLeafId)?.label ?? intentLeafId;
-}
-
 export function ActivityDetailPanel({
   activity,
   isLogged,
@@ -51,6 +44,10 @@ export function ActivityDetailPanel({
   const isReadOnly = mode === "readonly";
   const kindCfg = KIND_CONFIG[activity.kind];
   const intent = intentLabel(activity.intentLeafId);
+  const headerTitle =
+    activity.kind === "warmup"
+      ? (activity.block?.name ?? kindCfg.label)
+      : (intent || kindCfg.label);
 
   function handleLog() {
     onSaveLog(activity.id, formData);
@@ -76,8 +73,11 @@ export function ActivityDetailPanel({
           <div className={styles.panelHeaderLeft}>
             <div className={styles.panelAccent} style={{ backgroundColor: activity.accent }} />
             <div>
-              <div className={styles.panelTitle}>{intent || kindCfg.label}</div>
-              <div className={styles.panelType}>{kindCfg.label}</div>
+              <div className={styles.panelTitle}>{headerTitle}</div>
+              <div className={styles.panelType}>
+                {kindCfg.label}
+                {activity.kind === "train" && intent ? ` · ${intent}` : ""}
+              </div>
             </div>
           </div>
           <button className={styles.closeBtn} onClick={onClose} aria-label="Close panel">
@@ -107,6 +107,22 @@ export function ActivityDetailPanel({
                     </button>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {activity.kind !== "climb" && activity.block && (
+              <div className={styles.fieldGroup}>
+                <div className={styles.fieldLabel}>{activity.block.name}</div>
+                <ul className={styles.blockList}>
+                  {activity.block.exercises.map((ex, i) => (
+                    <li key={`${ex.name}-${i}`} className={styles.blockListItem}>
+                      <span className={styles.blockExerciseName}>{ex.name}</span>
+                      <span className={styles.blockExerciseDetail}>
+                        {describeExercise(ex)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
 

@@ -48,7 +48,8 @@
       "Bash(dir /B)",
       "Skill(to-prd)",
       "Skill(to-issues)",
-      "Bash(gh run *)"
+      "Bash(gh run *)",
+      "Bash(git *)"
     ]
   }
 }

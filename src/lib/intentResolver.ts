@@ -3,6 +3,7 @@ import {
   JUST_CLIMBING_LEAF,
   JUST_CLIMBING_LEAF_ID,
 } from "../data/syntheticIntents";
+import { SKILL_TREE } from "../data/skillTree";
 import { findLeaf, getLeavesByKind } from "./skillTreeLookup";
 
 export function getAllIntentsForKind(
@@ -27,6 +28,19 @@ function resolveLeaf(
   const leaf = findLeaf(tree, leafId);
   if (!leaf) return null;
   return leaf.allowedKinds.includes(kind) ? leaf : null;
+}
+
+export function getIntentLeaf(
+  leafId: string,
+  tree: TreeNode[] = SKILL_TREE,
+): TreeLeaf | null {
+  if (leafId === JUST_CLIMBING_LEAF_ID) return JUST_CLIMBING_LEAF;
+  return findLeaf(tree, leafId);
+}
+
+export function intentLabel(intentLeafId: string | null): string {
+  if (!intentLeafId) return "";
+  return getIntentLeaf(intentLeafId)?.label ?? intentLeafId;
 }
 
 export function getGoalIntentsForKind(
