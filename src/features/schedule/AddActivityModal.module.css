@@ -11,12 +11,13 @@
 .modal {
   background: white;
   border-radius: 8px;
-  width: 400px;
-  max-width: 90vw;
+  width: 560px;
+  max-width: 92vw;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  font-family: 'Space Grotesk', 'Arial', sans-serif;
 }
 
 .modalHeader {
@@ -29,7 +30,7 @@
 
 .modalTitle {
   font-size: 14px;
-  font-weight: bold;
+  font-weight: 700;
   color: #413f39;
   flex: 1;
 }
@@ -41,233 +42,56 @@
   color: #c4c3c0;
   cursor: pointer;
   padding: 0 2px;
-  font-family: Arial, Helvetica, sans-serif;
   line-height: 1;
 }
 
 .closeBtn:hover { color: #787878; }
 
-.backBtn {
-  border: none;
-  background: transparent;
-  font-size: 13px;
-  color: #787878;
-  cursor: pointer;
-  padding: 2px 4px;
-  font-family: Arial, Helvetica, sans-serif;
-  flex-shrink: 0;
-}
-
-.backBtn:hover { color: #413f39; }
-
-/* ── Step 1: Category picker ── */
+/* ── Kind picker — 3 cards in a row ── */
 
 .categoryGrid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 10px;
-  padding: 8px 16px 16px;
+  padding: 4px 16px 18px;
 }
 
 .categoryBtn {
+  position: relative;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 16px 14px;
+  justify-content: center;
+  gap: 12px;
+  min-height: 140px;
+  padding: 18px 12px 14px;
   border: 2px solid #e0e0e0;
   border-radius: 8px;
   background: white;
   cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
+  font-family: inherit;
   color: #413f39;
-  font-family: Arial, Helvetica, sans-serif;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    transform 0.15s ease;
 }
 
-.categoryBtn:hover {
+.categoryBtn.enabled:hover {
   background-color: #fafafa;
-}
-
-.categoryDot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-/* ── Step 2: Climbing form ── */
-
-.climbingForm {
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: #e0e0e0 transparent;
-}
-
-.formSection {
-  padding: 12px 16px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.fieldLabel {
-  display: block;
-  font-size: 11px;
-  font-weight: 600;
-  color: #787878;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 8px;
-}
-
-/* Duration presets */
-
-.presetRow {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.presetBtn {
-  padding: 8px 16px;
-  border: 1px solid #e0e0e0;
-  border-radius: 20px;
-  background: white;
-  cursor: pointer;
-  font-size: 13px;
-  color: #413f39;
-  font-family: Arial, Helvetica, sans-serif;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
-}
-
-.presetBtn:hover {
   border-color: #c4c3c0;
-  background-color: #fafafa;
+  transform: translateY(-1px);
 }
 
-.presetSelected {
-  border-color: #DA2128;
-  background-color: #fef2f2;
-  color: #DA2128;
-  font-weight: 600;
+.categoryBtn.disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
-/* Focus options */
-
-.focusRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.focusBtn {
-  padding: 6px 12px;
-  border: 1px solid #e0e0e0;
-  border-radius: 16px;
-  background: white;
-  cursor: pointer;
-  font-size: 12px;
-  color: #413f39;
-  font-family: Arial, Helvetica, sans-serif;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
-}
-
-.focusBtn:hover {
-  border-color: #c4c3c0;
-  background-color: #fafafa;
-}
-
-.focusSelected {
-  border-color: #DA2128;
-  background-color: #fef2f2;
-  color: #DA2128;
-  font-weight: 600;
-}
-
-/* ── Step 2: Tabs ── */
-
-.tabsContainer {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  overflow: hidden;
-}
-
-.tabBar {
-  display: flex;
-  padding: 0 16px;
-  border-bottom: 1px solid #f0f0f0;
-  flex-shrink: 0;
-}
-
-.tab {
-  padding: 10px 16px;
-  border: none;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-  background: transparent;
-  cursor: pointer;
+.categoryLabel {
   font-size: 13px;
-  color: #787878;
-  font-family: Arial, Helvetica, sans-serif;
-  transition: color 0.15s ease;
-}
-
-.tab:hover { color: #413f39; }
-
-.tabActive {
-  color: #413f39;
   font-weight: 600;
-  border-bottom-color: #413f39;
-}
-
-/* ── Template list (shared by tabs and edit) ── */
-
-.activityList {
-  flex: 1;
-  overflow-y: auto;
-  padding: 0 0 8px;
-  scrollbar-width: thin;
-  scrollbar-color: #e0e0e0 transparent;
-}
-
-.templateItem {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  width: 100%;
-  padding: 10px 16px;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  text-align: left;
-  font-family: Arial, Helvetica, sans-serif;
-  transition: background-color 0.1s ease;
-}
-
-.templateItem:hover { background-color: #fafafa; }
-
-.activityAccent {
-  width: 4px;
-  min-height: 24px;
-  border-radius: 2px;
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.templateText {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  flex: 1;
-  min-width: 0;
-}
-
-.activityTitle {
-  font-size: 13px;
   color: #413f39;
-  font-weight: 500;
 }
 
 .exerciseList {
@@ -276,98 +100,15 @@
   line-height: 1.4;
 }
 
-/* ── Step 3: Edit screen ── */
-
-.editBlockName {
-  padding: 12px 16px 8px;
-  font-size: 14px;
-  font-weight: 600;
-  color: #413f39;
-  border-bottom: 1px solid #f0f0f0;
-  flex-shrink: 0;
-}
-
-.editScreen {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  overflow: hidden;
-}
-
-.editExerciseRow {
-  padding: 12px 16px;
-  border-bottom: 1px solid #f5f5f5;
-}
-
-.editExerciseName {
+.hexMarker {
   display: block;
-  font-size: 13px;
-  font-weight: 600;
-  color: #413f39;
-  margin-bottom: 8px;
 }
 
-.editFields {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  align-items: flex-end;
+.hexMarker polygon.glow {
+  fill: var(--kind-color, #F5A623);
+  opacity: 0.14;
 }
 
-.editField {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.editFieldLabel {
-  font-size: 10px;
-  font-weight: 600;
-  color: #9d9c99;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-}
-
-.editInput {
-  width: 60px;
-  padding: 5px 8px;
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
-  font-size: 13px;
-  font-family: Arial, Helvetica, sans-serif;
-  color: #413f39;
-  outline: none;
-}
-
-.editInput:focus { border-color: #c4c3c0; }
-
-.unitLabel {
-  font-size: 11px;
-  color: #9d9c99;
-  padding-bottom: 6px;
-}
-
-/* ── Submit row (shared) ── */
-
-.submitRow {
-  padding: 12px 16px 0;
-  flex-shrink: 0;
-}
-
-.submitBtn {
-  width: 100%;
-  padding: 10px;
-  border: none;
-  border-radius: 6px;
-  background: #DA2128;
-  color: white;
-  font-size: 13px;
-  font-weight: 600;
-  font-family: Arial, Helvetica, sans-serif;
-  cursor: pointer;
-  margin-bottom: 12px;
-}
-
-.submitBtn:hover {
-  background: #b91c22;
+.hexMarker polygon.core {
+  fill: var(--kind-color, #F5A623);
 }

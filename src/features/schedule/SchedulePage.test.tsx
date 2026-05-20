@@ -23,7 +23,16 @@ vi.mock("@hello-pangea/dnd", () => ({
 }));
 
 import { SchedulePage } from "./SchedulePage";
+import { GoalsProvider } from "../../contexts/GoalsContext";
 import type { Columns } from "../../types";
+
+function renderSchedule() {
+  return render(
+    <GoalsProvider>
+      <SchedulePage />
+    </GoalsProvider>,
+  );
+}
 
 const EMPTY_COLUMNS: Columns = {
   Monday: [],
@@ -50,7 +59,7 @@ describe("SchedulePage", () => {
       handleDragEnd: vi.fn(),
     });
 
-    render(<SchedulePage />);
+    renderSchedule();
 
     const restDays = screen.getAllByText("Rest Day");
     expect(restDays).toHaveLength(7);
@@ -79,7 +88,7 @@ describe("SchedulePage", () => {
       handleDragEnd: vi.fn(),
     });
 
-    render(<SchedulePage />);
+    renderSchedule();
 
     const restDays = screen.getAllByText("Rest Day");
     expect(restDays).toHaveLength(6);
@@ -95,7 +104,7 @@ describe("SchedulePage", () => {
       handleDragEnd: vi.fn(),
     });
 
-    render(<SchedulePage />);
+    renderSchedule();
 
     expect(screen.queryByText("Rest Day")).toBeNull();
   });
@@ -117,7 +126,7 @@ describe("SchedulePage", () => {
 
     it("opens modal when clicking Add Activity button", async () => {
       const user = userEvent.setup();
-      render(<SchedulePage />);
+      renderSchedule();
 
       const addButtons = screen.getAllByText("Add Activity");
       await user.click(addButtons[0]);
@@ -128,13 +137,14 @@ describe("SchedulePage", () => {
 
     it("completing the Climb flow calls addActivity and closes the modal", async () => {
       const user = userEvent.setup();
-      render(<SchedulePage />);
+      renderSchedule();
 
       const addButtons = screen.getAllByText("Add Activity");
       await user.click(addButtons[0]);
 
       await user.click(screen.getByRole("button", { name: /^climb$/i }));
-      await user.click(screen.getByText("Footwork"));
+      await user.click(screen.getByRole("button", { name: /^technique$/i }));
+      await user.click(screen.getByRole("button", { name: /^footwork$/i }));
 
       expect(mockAddActivity).toHaveBeenCalledWith(
         expect.any(String),
@@ -145,7 +155,7 @@ describe("SchedulePage", () => {
 
     it("closes modal when clicking overlay", async () => {
       const user = userEvent.setup();
-      render(<SchedulePage />);
+      renderSchedule();
 
       const addButtons = screen.getAllByText("Add Activity");
       await user.click(addButtons[0]);

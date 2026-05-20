@@ -1,11 +1,9 @@
 import { useState } from "react";
 import { KIND_CONFIG } from "../../data/kindConfig";
-import { SKILL_TREE } from "../../data/skillTree";
-import {
-  getAllIntentsForKind,
-  getSyntheticJustClimbing,
-} from "../../lib/intentResolver";
-import type { Kind, TreeLeaf } from "../../types";
+import { useRecentIntents } from "../../hooks/useRecentIntents";
+import { IntentPickerModal } from "./IntentPickerModal";
+import { hexPoints } from "../../utils/hex";
+import type { Kind } from "../../types";
 import type { AddActivityInput } from "../../hooks/useWeekActivities";
 import styles from "./AddActivityModal.module.css";
 
@@ -15,121 +13,94 @@ interface AddActivityModalProps {
   onAdd: (input: AddActivityInput) => void;
 }
 
-type Screen = "kind" | "climb-intent";
-
 const KIND_ORDER: Kind[] = ["climb", "warmup", "train"];
 const ENABLED_KINDS: Kind[] = ["climb"];
 
+function CoordHex({ color }: { color: string }) {
+  const size = 28;
+  const glowR = Math.round(size * 1.25);
+  const svgSize = glowR * 2 + 4;
+  const cx = svgSize / 2;
+  const cy = svgSize / 2;
+  return (
+    <svg
+      className={styles.hexMarker}
+      width={svgSize}
+      height={svgSize}
+      style={{ ["--kind-color" as string]: color }}
+      aria-hidden="true"
+    >
+      <polygon className="glow" points={hexPoints(cx, cy, glowR)} />
+      <polygon className="core" points={hexPoints(cx, cy, size)} />
+    </svg>
+  );
+}
+
 export function AddActivityModal({ dayLabel, onClose, onAdd }: AddActivityModalProps) {
-  const [screen, setScreen] = useState<Screen>("kind");
+  const [pickedKind, setPickedKind] = useState<Kind | null>(null);
+  const { recents, recordPick } = useRecentIntents();
 
   const handleSelectKind = (kind: Kind) => {
     if (!ENABLED_KINDS.includes(kind)) return;
-    if (kind === "climb") setScreen("climb-intent");
+    setPickedKind(kind);
   };
 
-  const handleSelectClimbIntent = (leaf: TreeLeaf) => {
-    onAdd({ kind: "climb", intentLeafId: leaf.id, block: null });
+  const handleClimbIntentSelected = (leafId: string) => {
+    recordPick(leafId);
+    onAdd({ kind: "climb", intentLeafId: leafId, block: null });
     onClose();
   };
 
-  const handleBack = () => {
-    setScreen("kind");
-  };
-
-  const renderKindPicker = () => (
-    <div className={styles.categoryGrid}>
-      {KIND_ORDER.map((kind) => {
-        const cfg = KIND_CONFIG[kind];
-        const enabled = ENABLED_KINDS.includes(kind);
-        return (
-          <button
-            key={kind}
-            className={styles.categoryBtn}
-            style={{
-              borderColor: cfg.color,
-              opacity: enabled ? 1 : 0.5,
-              cursor: enabled ? "pointer" : "not-allowed",
-            }}
-            onClick={() => handleSelectKind(kind)}
-            disabled={!enabled}
-            aria-disabled={!enabled}
-          >
-            <span
-              className={styles.categoryDot}
-              style={{ backgroundColor: cfg.color }}
-            />
-            <span>{cfg.label}</span>
-            {!enabled && (
-              <span className={styles.exerciseList}>Coming soon</span>
-            )}
-          </button>
-        );
-      })}
-    </div>
-  );
-
-  const renderClimbIntent = () => {
-    const justClimbing = getSyntheticJustClimbing();
-    const leaves = getAllIntentsForKind("climb", SKILL_TREE);
-    const accent = KIND_CONFIG.climb.color;
+  if (pickedKind === "climb") {
     return (
-      <div className={styles.activityList}>
-        <button
-          key={justClimbing.id}
-          className={styles.templateItem}
-          onClick={() => handleSelectClimbIntent(justClimbing)}
-        >
-          <span
-            className={styles.activityAccent}
-            style={{ backgroundColor: accent }}
-          />
-          <div className={styles.templateText}>
-            <span className={styles.activityTitle}>{justClimbing.label}</span>
-            <span className={styles.exerciseList}>
-              No specific training intent
-            </span>
-          </div>
-        </button>
-        {leaves.map((leaf) => (
-          <button
-            key={leaf.id}
-            className={styles.templateItem}
-            onClick={() => handleSelectClimbIntent(leaf)}
-          >
-            <span
-              className={styles.activityAccent}
-              style={{ backgroundColor: accent }}
-            />
-            <div className={styles.templateText}>
-              <span className={styles.activityTitle}>{leaf.label}</span>
-            </div>
-          </button>
-        ))}
-      </div>
+      <IntentPickerModal
+        dayLabel={dayLabel}
+        kind="climb"
+        recentIds={recents}
+        onClose={onClose}
+        onSelect={handleClimbIntentSelected}
+      />
     );
-  };
-
-  const headerLabel =
-    screen === "kind" ? `Add Activity — ${dayLabel}` : `Pick Intent — ${dayLabel}`;
+  }
 
   return (
     <div className={styles.overlay} data-testid="modal-overlay" onClick={onClose}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <div className={styles.modalHeader}>
-          {screen !== "kind" && (
-            <button className={styles.backBtn} onClick={handleBack}>
-              ← Back
-            </button>
-          )}
-          <span className={styles.modalTitle}>{headerLabel}</span>
-          <button className={styles.closeBtn} onClick={onClose}>
+          <span className={styles.modalTitle}>Add Activity — {dayLabel}</span>
+          <button
+            type="button"
+            className={styles.closeBtn}
+            onClick={onClose}
+            aria-label="Close"
+          >
             ×
           </button>
         </div>
 
-        {screen === "kind" && renderKindPicker()}
-        {screen === "climb-intent" && renderClimbIntent()}
+        <div className={styles.categoryGrid}>
+          {KIND_ORDER.map((kind) => {
+            const cfg = KIND_CONFIG[kind];
+            const enabled = ENABLED_KINDS.includes(kind);
+            return (
+              <button
+                type="button"
+                key={kind}
+                className={`${styles.categoryBtn} ${enabled ? styles.enabled : styles.disabled}`}
+                onClick={() => handleSelectKind(kind)}
+                disabled={!enabled}
+                aria-disabled={!enabled}
+                aria-label={cfg.label}
+              >
+                <CoordHex color={cfg.color} />
+                <span className={styles.categoryLabel}>{cfg.label}</span>
+                {!enabled && (
+                  <span className={styles.exerciseList}>Coming soon</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
