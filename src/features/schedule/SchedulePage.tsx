@@ -17,8 +17,14 @@ export function SchedulePage() {
   const [weekMonday, setWeekMonday] = useState(() => getMonday(new Date()));
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
 
-  const { columns, loading, error, addActivity, deleteActivity, handleDragEnd } =
+  const { columns, activities, loading, error, addActivity, deleteActivity, handleDragEnd } =
     useWeekActivities(weekMonday);
+
+  const weekSunday = useMemo(() => {
+    const d = new Date(weekMonday);
+    d.setDate(d.getDate() + 6);
+    return d;
+  }, [weekMonday]);
 
   const { isLogged, getLog, saveLog } = useActivityLog();
 
@@ -87,7 +93,11 @@ export function SchedulePage() {
         </div>
       </header>
 
-      <LoadSummaryBar />
+      <LoadSummaryBar
+        activities={activities}
+        weekStart={weekMonday}
+        weekEnd={weekSunday}
+      />
 
       <DragDropContext onDragEnd={handleDragEnd}>
         <div

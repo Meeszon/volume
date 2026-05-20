@@ -9,6 +9,14 @@ import { AuthProvider } from "../contexts/AuthContext";
 import { useAuth } from "../contexts/useAuth";
 import styles from "./App.module.css";
 
+// Slice 4/5 cleanup: the old type-target rollup is gone. Drop any stale
+// per-user-agent storage left over from previous app versions.
+try {
+  localStorage.removeItem("volume:weeklyTargets");
+} catch {
+  // ignore storage errors (private mode, quota, etc.)
+}
+
 function AuthenticatedApp() {
   return (
     <GoalsProvider>

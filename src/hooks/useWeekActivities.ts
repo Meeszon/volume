@@ -275,6 +275,7 @@ export function useWeekActivities(weekMonday: Date) {
 
   return {
     columns,
+    activities: dbActivities,
     loading,
     error,
     addActivity,

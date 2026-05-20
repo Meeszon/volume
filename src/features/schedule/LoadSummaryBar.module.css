@@ -21,6 +21,16 @@
   color: #b0afab;
 }
 
+.emptyCta {
+  color: #6b6b68;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.emptyCta:hover {
+  color: #413f39;
+}
+
 .entry {
   display: flex;
   align-items: center;
@@ -28,10 +38,18 @@
   flex-shrink: 0;
 }
 
+.entryDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
 .entryLabel {
   font-size: 12px;
   font-weight: 500;
   white-space: nowrap;
+  color: #413f39;
 }
 
 .progressTrack {

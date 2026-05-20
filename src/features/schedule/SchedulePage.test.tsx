@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 
 const mockUseWeekActivities = vi.hoisted(() => vi.fn());
 
@@ -28,9 +29,11 @@ import type { Columns } from "../../types";
 
 function renderSchedule() {
   return render(
-    <GoalsProvider>
-      <SchedulePage />
-    </GoalsProvider>,
+    <MemoryRouter>
+      <GoalsProvider>
+        <SchedulePage />
+      </GoalsProvider>
+    </MemoryRouter>,
   );
 }
 
@@ -52,6 +55,7 @@ describe("SchedulePage", () => {
   it("shows 'Rest Day' for every day when all columns are empty", () => {
     mockUseWeekActivities.mockReturnValue({
       columns: EMPTY_COLUMNS,
+      activities: [],
       loading: false,
       error: null,
       addActivity: vi.fn(),
@@ -81,6 +85,7 @@ describe("SchedulePage", () => {
 
     mockUseWeekActivities.mockReturnValue({
       columns,
+      activities: [],
       loading: false,
       error: null,
       addActivity: vi.fn(),
@@ -97,6 +102,7 @@ describe("SchedulePage", () => {
   it("does not show 'Rest Day' while loading", () => {
     mockUseWeekActivities.mockReturnValue({
       columns: EMPTY_COLUMNS,
+      activities: [],
       loading: true,
       error: null,
       addActivity: vi.fn(),
@@ -116,6 +122,7 @@ describe("SchedulePage", () => {
       mockAddActivity = vi.fn();
       mockUseWeekActivities.mockReturnValue({
         columns: EMPTY_COLUMNS,
+        activities: [],
         loading: false,
         error: null,
         addActivity: mockAddActivity,
