@@ -15,7 +15,11 @@ export function LoginPage() {
     setSending(true);
     setError(null);
 
-    const { error: signInError } = await supabase.auth.signInWithOtp({ email });
+    const redirectTo = `${window.location.origin}${import.meta.env.BASE_URL}`;
+    const { error: signInError } = await supabase.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: redirectTo },
+    });
 
     setSending(false);
     if (signInError) {

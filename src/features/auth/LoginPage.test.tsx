@@ -37,6 +37,9 @@ describe("LoginPage", () => {
 
     expect(mockSignInWithOtp).toHaveBeenCalledWith({
       email: "test@example.com",
+      options: {
+        emailRedirectTo: `${window.location.origin}${import.meta.env.BASE_URL}`,
+      },
     });
   });
 
