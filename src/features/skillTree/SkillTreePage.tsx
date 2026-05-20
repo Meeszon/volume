@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { SKILL_TREE, CATEGORY_COLORS } from "../../data/skillTree";
 import { isLeaf } from "../../utils/tree";
+import { useGoals } from "../../contexts/useGoals";
 import type { TreeBranch, TreeLeaf, TreeNode } from "../../types";
 import { GoalsDashboard } from "./GoalsDashboard";
 import { SkillDetailPanel } from "./SkillDetailPanel";
@@ -138,10 +139,27 @@ function PersonCenter() {
   );
 }
 
+// ── Goal marker — five-pointed star, perched on the upper-right of the hex ──
+const GOAL_STAR_COLOR = "#f5b800";
+const GOAL_STAR_STROKE = "#7a5a00";
+
+function goalStarPts(cx: number, cy: number, r: number): string {
+  // Five-pointed star: alternating outer (r) and inner (r * 0.42) vertices.
+  const inner = r * 0.42;
+  const pts: string[] = [];
+  for (let i = 0; i < 10; i++) {
+    const radius = i % 2 === 0 ? r : inner;
+    const a = (i * 36 - 90) * (Math.PI / 180);
+    pts.push(`${cx + radius * Math.cos(a)},${cy + radius * Math.sin(a)}`);
+  }
+  return pts.join(" ");
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 export function SkillTreePage() {
   const [activeCatId, setActiveCatId] = useState<string | null>(null);
   const [selectedLeafId, setSelectedLeafId] = useState<string | null>(null);
+  const { isGoal } = useGoals();
 
   const viewRef = useRef<View>({ x: 0, y: 0, k: 1 });
   const svgRef = useRef<SVGSVGElement>(null);
@@ -548,9 +566,12 @@ export function SkillTreePage() {
             {l1Nodes.map((node, i) => {
               const [cx, cy] = l1Positions[i] ?? [PENT_CX, PENT_CY];
               const isSel = node.id === selectedLeafId;
+              const goalActive = isLeaf(node) && isGoal(node.id);
               const Icon = ICON_MAP[node.id] ?? Zap;
               const half = L1_ICON / 2;
               const lines = labelLines(node.label);
+              const starCx = cx + L1_R * Math.cos(-Math.PI / 6);
+              const starCy = cy + L1_R * Math.sin(-Math.PI / 6);
               return (
                 <motion.g
                   key={`l1-${activeCatId}-${node.id}`}
@@ -560,15 +581,34 @@ export function SkillTreePage() {
                   animate={{ scale: 1, opacity: isSel ? 1 : 0.75 }}
                   exit={{ scale: 0, opacity: 0 }}
                   transition={{ ...spring, delay: i * 0.06 + 0.1 }}
+                  data-testid={`leaf-${node.id}`}
+                  data-goal={goalActive ? "true" : undefined}
                 >
                   <polygon points={hexPts(cx, cy, L1_GLOW_R)} fill={catColor} opacity={0.1} />
-                  <polygon points={hexPts(cx, cy, L1_R)} fill={catColor} filter="url(#hex-shadow)" />
+                  <polygon
+                    points={hexPts(cx, cy, L1_R)}
+                    fill={catColor}
+                    filter="url(#hex-shadow)"
+                    stroke={goalActive ? GOAL_STAR_COLOR : "none"}
+                    strokeWidth={goalActive ? 2.5 : 0}
+                  />
                   <Icon
                     x={cx - half} y={cy - half}
                     width={L1_ICON} height={L1_ICON}
                     color="white" strokeWidth={2.5}
                     style={{ pointerEvents: "none" }}
                   />
+                  {goalActive && (
+                    <polygon
+                      points={goalStarPts(starCx, starCy, 8)}
+                      fill={GOAL_STAR_COLOR}
+                      stroke={GOAL_STAR_STROKE}
+                      strokeWidth={1}
+                      strokeLinejoin="round"
+                      style={{ pointerEvents: "none" }}
+                      data-testid={`goal-marker-${node.id}`}
+                    />
+                  )}
                   {lines.map((line, li) => {
                     const lp = l1LabelProps(cx, cy, li, lines.length);
                     return (
