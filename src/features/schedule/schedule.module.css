@@ -212,21 +212,21 @@
 .todayPip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   margin-left: 8px;
   font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.14em;
-  color: #c77a1e;
+  font-size: 9.5px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  color: var(--ink-4);
 }
 
 .todayPip::before {
   content: "";
-  width: 5px;
-  height: 5px;
+  width: 4px;
+  height: 4px;
   border-radius: 50%;
-  background: #e08f25;
-  box-shadow: 0 0 0 2px rgba(224, 143, 37, 0.18);
+  background: var(--ink-4);
 }
 
 /* ── Add Activity button ── */
@@ -275,22 +275,88 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  border-radius: 4px;
   padding: 2px 0;
-  transition: background-color 0.15s ease;
+  position: relative;
 }
 
-.cardListDragOver {
-  background-color: rgba(180, 180, 180, 0.18);
+/* Drop indicator: chalk-stroke dashes that march slowly around the exact
+ * slot where the card will land. Tinted with the dragged card's category
+ * color via --drag-color, set on the board in SchedulePage.
+ *
+ * Rendered as a dedicated zero-height sibling div inserted between
+ * Draggables at the destination index — *not* a pseudo on the card,
+ * since .activityCard has overflow:hidden (for the cardStrip's noise
+ * texture) which would clip anything reaching above it. The 0 layout
+ * height means we don't fight the library's own gap-creating transforms.
+ *
+ * The dashes are drawn by an SVG <rect> with stroke-dasharray rather
+ * than CSS linear-gradients. A single continuous stroke keeps thickness
+ * uniform on all four edges at any device pixel ratio — the gradient
+ * approach was rendering thinner on the right/bottom on low-DPI displays
+ * because the 1.5px stripe landed on a fractional device-pixel offset
+ * (container_width − 1.5px) and got anti-aliased into something
+ * narrower. */
+
+.dropIndicator {
+  position: relative;
+  height: 0;
+  flex-shrink: 0;
+}
+
+.dropIndicatorSvg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: var(--drag-card-height, 76px);
+  pointer-events: none;
+  overflow: visible;
+}
+
+.dropIndicatorRect {
+  x: 1px;
+  y: 1px;
+  width: calc(100% - 2px);
+  height: calc(100% - 2px);
+  rx: 5px;
+  ry: 5px;
+  fill: none;
+  stroke: var(--drag-color, var(--ink-3));
+  stroke-width: 1.5;
+  stroke-dasharray: 6 6;
+  opacity: 0.65;
+  animation: dashMarch 2.4s linear infinite;
+}
+
+@keyframes dashMarch {
+  to {
+    stroke-dashoffset: -12;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dropIndicatorRect {
+    animation: none;
+  }
 }
 
 .restDay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
   font-family: var(--font-ui);
   font-size: 12px;
   font-style: italic;
   color: var(--ink-4);
   padding: 16px 4px;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 140ms ease;
+}
+
+.restDayHidden {
+  opacity: 0;
 }
 
 /* ── Activity card ("tape" style) ── */
@@ -310,7 +376,8 @@
   cursor: grab;
   user-select: none;
   min-height: 64px;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  margin-bottom: 10px;
+  transition: box-shadow 0.15s ease;
 }
 
 .activityCard:hover {

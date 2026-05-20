@@ -1,5 +1,20 @@
-import { useState, useRef, useEffect, useMemo, useCallback } from "react";
-import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+import {
+  Fragment,
+  useState,
+  useRef,
+  useEffect,
+  useMemo,
+  useCallback,
+} from "react";
+import type { CSSProperties } from "react";
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  type DragStart,
+  type DragUpdate,
+  type DropResult,
+} from "@hello-pangea/dnd";
 import { AnimatePresence } from "framer-motion";
 import {
   getMonday,
@@ -15,6 +30,7 @@ import { ActivityCard } from "./ActivityCard";
 import { AddActivityModal } from "./AddActivityModal";
 import { LoadSummaryBar } from "./LoadSummaryBar";
 import { ActivityDetailPanel } from "./ActivityDetailPanel";
+import { getActivityCategoryColor } from "../../lib/categoryColor";
 import type { Activity } from "../../types";
 import styles from "./schedule.module.css";
 
@@ -36,13 +52,90 @@ function formatColumnDate(date: Date): string {
   return `${monthFmt.format(date)} ${date.getDate()}`;
 }
 
+function DropIndicator() {
+  return (
+    <div className={styles.dropIndicator} aria-hidden="true">
+      <svg className={styles.dropIndicatorSvg} preserveAspectRatio="none">
+        <rect className={styles.dropIndicatorRect} />
+      </svg>
+    </div>
+  );
+}
+
 export function SchedulePage() {
   const [modalDayId, setModalDayId] = useState<string | null>(null);
   const [weekMonday, setWeekMonday] = useState(() => getMonday(new Date()));
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
+  const [dragColor, setDragColor] = useState<string | null>(null);
+  const [dragHeight, setDragHeight] = useState<number | null>(null);
+  const sourceRef = useRef<{ dayId: string; index: number } | null>(null);
+  const [destDayId, setDestDayId] = useState<string | null>(null);
+  // markedIndex is the DOM position where the drop-slot indicator gets
+  // inserted, in [0, cards.length]. cards.length means "after every card".
+  const [markedIndex, setMarkedIndex] = useState<number | null>(null);
 
   const { columns, activities, loading, error, addActivity, deleteActivity, handleDragEnd } =
     useWeekActivities(weekMonday);
+
+  const onDragStart = useCallback(
+    (start: DragStart) => {
+      sourceRef.current = {
+        dayId: start.source.droppableId,
+        index: start.source.index,
+      };
+      // Seed destination to the source so the indicator shows in the source
+      // slot immediately on pickup. onDragUpdate only fires once the cursor
+      // moves, so without this the indicator wouldn't appear until the user
+      // leaves and re-enters a column.
+      setDestDayId(start.source.droppableId);
+      setMarkedIndex(start.source.index);
+      for (const dayActs of Object.values(columns)) {
+        const found = dayActs.find((a) => a.id === start.draggableId);
+        if (found) {
+          setDragColor(getActivityCategoryColor(found));
+          break;
+        }
+      }
+      const el = document.querySelector(
+        `[data-rfd-draggable-id="${start.draggableId}"]`,
+      );
+      if (el instanceof HTMLElement) {
+        setDragHeight(el.getBoundingClientRect().height);
+      }
+    },
+    [columns],
+  );
+
+  const onDragUpdate = useCallback((update: DragUpdate) => {
+    const dest = update.destination;
+    if (!dest) {
+      setDestDayId(null);
+      setMarkedIndex(null);
+      return;
+    }
+    const src = sourceRef.current;
+    // When dragging downward within the same column, dest.index counts the
+    // position *after* the source card is removed, so the indicator goes
+    // one DOM slot further to land in the right visual gap.
+    let mark = dest.index;
+    if (src && src.dayId === dest.droppableId && src.index < dest.index) {
+      mark = dest.index + 1;
+    }
+    setDestDayId(dest.droppableId);
+    setMarkedIndex(mark);
+  }, []);
+
+  const onDragEnd = useCallback(
+    (result: DropResult) => {
+      setDragColor(null);
+      setDragHeight(null);
+      setDestDayId(null);
+      setMarkedIndex(null);
+      sourceRef.current = null;
+      handleDragEnd(result);
+    },
+    [handleDragEnd],
+  );
 
   const weekSunday = useMemo(() => {
     const d = new Date(weekMonday);
@@ -161,12 +254,26 @@ export function SchedulePage() {
         weekEnd={weekSunday}
       />
 
-      <DragDropContext onDragEnd={handleDragEnd}>
+      <DragDropContext
+        onDragStart={onDragStart}
+        onDragUpdate={onDragUpdate}
+        onDragEnd={onDragEnd}
+      >
         <div
           className={styles.boardScroll}
           ref={boardRef}
           onMouseDown={onBoardMouseDown}
           onMouseMove={onBoardMouseMove}
+          style={
+            dragColor || dragHeight
+              ? ({
+                  ...(dragColor ? { ["--drag-color"]: dragColor } : null),
+                  ...(dragHeight
+                    ? { ["--drag-card-height"]: `${dragHeight}px` }
+                    : null),
+                } as CSSProperties)
+              : undefined
+          }
         >
           <div className={styles.boardInner}>
             {dayMeta.map((day) => (
@@ -178,7 +285,7 @@ export function SchedulePage() {
                   <div className={styles.columnDayName}>{day.shortName}</div>
                   <div className={styles.columnDate}>
                     {day.upperDate}
-                    {day.isToday && <span className={styles.todayPip}>TODAY</span>}
+                    {day.isToday && <span className={styles.todayPip}>today</span>}
                   </div>
                 </div>
                 <button
@@ -189,31 +296,46 @@ export function SchedulePage() {
                   <span className={styles.addActivityLabel}>Add activity</span>
                 </button>
                 <Droppable droppableId={day.id}>
-                  {(provided, snapshot) => {
+                  {(provided) => {
                     const dayActivities = columns[day.id] ?? [];
+                    const indicatorAt =
+                      destDayId === day.id && markedIndex !== null
+                        ? markedIndex
+                        : -1;
                     return (
                       <div
                         ref={provided.innerRef}
                         {...provided.droppableProps}
-                        className={`${styles.cardList}${snapshot.isDraggingOver ? ` ${styles.cardListDragOver}` : ""}`}
+                        className={styles.cardList}
                       >
                         {!loading && dayActivities.length === 0 && (
-                          <div className={styles.restDay}>Rest day</div>
+                          <div
+                            className={`${styles.restDay}${destDayId === day.id ? ` ${styles.restDayHidden}` : ""}`}
+                          >
+                            Rest day
+                          </div>
                         )}
-                        {!loading && dayActivities.map((task, index) => (
-                          <Draggable key={task.id} draggableId={task.id} index={index}>
-                            {(provided, snapshot) => (
-                              <ActivityCard
-                                task={task}
-                                provided={provided}
-                                snapshot={snapshot}
-                                onDelete={deleteActivity}
-                                onOpenPanel={setSelectedActivity}
-                                isLogged={isLogged(task.id)}
-                              />
-                            )}
-                          </Draggable>
-                        ))}
+                        {!loading &&
+                          dayActivities.map((task, index) => (
+                            <Fragment key={task.id}>
+                              {indicatorAt === index && <DropIndicator />}
+                              <Draggable draggableId={task.id} index={index}>
+                                {(provided, snapshot) => (
+                                  <ActivityCard
+                                    task={task}
+                                    provided={provided}
+                                    snapshot={snapshot}
+                                    onDelete={deleteActivity}
+                                    onOpenPanel={setSelectedActivity}
+                                    isLogged={isLogged(task.id)}
+                                  />
+                                )}
+                              </Draggable>
+                            </Fragment>
+                          ))}
+                        {indicatorAt === dayActivities.length && (
+                          <DropIndicator />
+                        )}
                         {provided.placeholder}
                       </div>
                     );

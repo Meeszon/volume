@@ -57,7 +57,7 @@ describe("LoadSummaryBar", () => {
     expect(cta.getAttribute("href")).toBe("/goals");
   });
 
-  it("renders one row per goal with the correct count", () => {
+  it("renders one row per goal, marked as covered when sessions exist", () => {
     const goals = [{ leafId: "footwork" }, { leafId: "finger-strength" }];
     const activities = [
       makeActivity({ kind: "climb", intent_leaf_id: "footwork" }),
@@ -68,43 +68,53 @@ describe("LoadSummaryBar", () => {
 
     expect(screen.getByText("Footwork")).toBeTruthy();
     expect(screen.getByText("Finger Strength")).toBeTruthy();
-    expect(screen.getByTestId("goal-count-footwork").textContent).toBe("2");
-    expect(screen.getByTestId("goal-count-finger-strength").textContent).toBe(
-      "1",
-    );
+    expect(
+      screen.getByTestId("goal-row-footwork").getAttribute("data-covered"),
+    ).toBe("true");
+    expect(
+      screen
+        .getByTestId("goal-row-finger-strength")
+        .getAttribute("data-covered"),
+    ).toBe("true");
   });
 
-  it("renders zero-count goal rows", () => {
+  it("renders zero-count goal rows distinctly from covered ones", () => {
     const goals = [{ leafId: "footwork" }, { leafId: "hip-mobility" }];
     const activities = [
       makeActivity({ kind: "climb", intent_leaf_id: "footwork" }),
     ];
     renderBar(activities, goals);
 
-    expect(screen.getByTestId("goal-count-footwork").textContent).toBe("1");
-    expect(screen.getByTestId("goal-count-hip-mobility").textContent).toBe("0");
+    expect(
+      screen.getByTestId("goal-row-footwork").getAttribute("data-covered"),
+    ).toBe("true");
+    expect(
+      screen.getByTestId("goal-row-hip-mobility").getAttribute("data-covered"),
+    ).toBe("false");
   });
 
-  it("excludes Warmup activities from the count", () => {
-    const goals = [{ leafId: "footwork" }];
+  it("excludes Warmup activities from coverage", () => {
+    const goals = [{ leafId: "hip-mobility" }];
     const activities = [
-      makeActivity({ kind: "climb", intent_leaf_id: "footwork" }),
-      makeActivity({ kind: "warmup", intent_leaf_id: "footwork" }),
+      makeActivity({ kind: "warmup", intent_leaf_id: "hip-mobility" }),
     ];
     renderBar(activities, goals);
 
-    expect(screen.getByTestId("goal-count-footwork").textContent).toBe("1");
+    expect(
+      screen.getByTestId("goal-row-hip-mobility").getAttribute("data-covered"),
+    ).toBe("false");
   });
 
-  it("excludes Just-Climbing activities from the count", () => {
+  it("excludes Just-Climbing activities from coverage", () => {
     const goals = [{ leafId: "footwork" }];
     const activities = [
-      makeActivity({ kind: "climb", intent_leaf_id: "footwork" }),
       makeActivity({ kind: "climb", intent_leaf_id: JUST_CLIMBING_LEAF_ID }),
     ];
     renderBar(activities, goals);
 
-    expect(screen.getByTestId("goal-count-footwork").textContent).toBe("1");
+    expect(
+      screen.getByTestId("goal-row-footwork").getAttribute("data-covered"),
+    ).toBe("false");
   });
 
   it("ignores activities outside the supplied week window", () => {
@@ -114,17 +124,15 @@ describe("LoadSummaryBar", () => {
         scheduled_date: "2026-05-10",
         intent_leaf_id: "footwork",
       }),
-      makeActivity({
-        scheduled_date: "2026-05-20",
-        intent_leaf_id: "footwork",
-      }),
     ];
     renderBar(activities, goals);
 
-    expect(screen.getByTestId("goal-count-footwork").textContent).toBe("1");
+    expect(
+      screen.getByTestId("goal-row-footwork").getAttribute("data-covered"),
+    ).toBe("false");
   });
 
-  it("updates the count when activities prop changes", () => {
+  it("updates coverage state when activities prop changes", () => {
     const goals = [{ leafId: "footwork" }];
     localStorage.setItem("volume:goals", JSON.stringify(goals));
 
@@ -139,7 +147,9 @@ describe("LoadSummaryBar", () => {
         </GoalsProvider>
       </MemoryRouter>,
     );
-    expect(screen.getByTestId("goal-count-footwork").textContent).toBe("0");
+    expect(
+      screen.getByTestId("goal-row-footwork").getAttribute("data-covered"),
+    ).toBe("false");
 
     rerender(
       <MemoryRouter>
@@ -154,6 +164,8 @@ describe("LoadSummaryBar", () => {
         </GoalsProvider>
       </MemoryRouter>,
     );
-    expect(screen.getByTestId("goal-count-footwork").textContent).toBe("1");
+    expect(
+      screen.getByTestId("goal-row-footwork").getAttribute("data-covered"),
+    ).toBe("true");
   });
 });

@@ -35,7 +35,7 @@ describe("getActivityCategoryColor", () => {
       kind: "climb",
       intentLeafId: JUST_CLIMBING_LEAF_ID,
     };
-    expect(getActivityCategoryColor(activity)).toBe("#7E7B73");
+    expect(getActivityCategoryColor(activity)).toBe("#6a6359");
   });
 
   it("returns the neutral for a Warmup activity", () => {
@@ -44,7 +44,7 @@ describe("getActivityCategoryColor", () => {
       kind: "warmup",
       intentLeafId: null,
     };
-    expect(getActivityCategoryColor(activity)).toBe("#7E7B73");
+    expect(getActivityCategoryColor(activity)).toBe("#6a6359");
   });
 
   it("returns the neutral for a Warmup activity even when an intentLeafId is set", () => {
@@ -53,7 +53,7 @@ describe("getActivityCategoryColor", () => {
       kind: "warmup",
       intentLeafId: "footwork",
     };
-    expect(getActivityCategoryColor(activity)).toBe("#7E7B73");
+    expect(getActivityCategoryColor(activity)).toBe("#6a6359");
   });
 
   it("returns the neutral for a Climb/Train activity with an unknown intentLeafId", () => {
@@ -62,7 +62,7 @@ describe("getActivityCategoryColor", () => {
       kind: "climb",
       intentLeafId: "unknown-leaf",
     };
-    expect(getActivityCategoryColor(activity)).toBe("#7E7B73");
+    expect(getActivityCategoryColor(activity)).toBe("#6a6359");
   });
 
   it("returns the neutral for a Climb/Train activity with a null intentLeafId", () => {
@@ -71,6 +71,6 @@ describe("getActivityCategoryColor", () => {
       kind: "train",
       intentLeafId: null,
     };
-    expect(getActivityCategoryColor(activity)).toBe("#7E7B73");
+    expect(getActivityCategoryColor(activity)).toBe("#6a6359");
   });
 });

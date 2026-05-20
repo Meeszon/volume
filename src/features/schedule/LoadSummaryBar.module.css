@@ -11,6 +11,9 @@
 
 .title {
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 9px;
   padding-right: 14px;
   border-right: 1px dashed rgba(26, 24, 20, 0.16);
   font-family: var(--font-mono);
@@ -22,13 +25,40 @@
   white-space: nowrap;
 }
 
-/* ── Chips ── */
+.titleTally {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 1px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  background: rgba(26, 24, 20, 0.05);
+  color: var(--ink-2);
+}
+
+.titleTally[data-all-covered="false"] {
+  background: rgba(192, 57, 43, 0.08);
+  color: #8a2e1f;
+}
+
+.titleTallyNum { font-weight: 700; }
+.titleTallySlash {
+  margin: 0 1px;
+  color: var(--ink-4);
+  font-weight: 400;
+}
+.titleTallyDenom { font-weight: 500; }
+
+/* ── Chip row ── */
 
 .chips {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   flex: 1;
   min-width: 0;
 }
@@ -36,16 +66,17 @@
 .chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   height: 28px;
   padding: 0 10px;
+  border-radius: 999px;
 }
 
 .chipDot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--cat);
+  border: 1.5px solid color-mix(in srgb, var(--cat) 65%, var(--ink-2));
   flex-shrink: 0;
 }
 
@@ -58,24 +89,21 @@
   letter-spacing: -0.005em;
 }
 
-.chipCount {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 2px;
-  margin-left: 2px;
-  font-family: var(--font-mono);
-  font-size: 11px;
+/* ── COVERED chip — ring filled in with category color ── */
+
+.chip[data-covered="true"] .chipDot {
+  background: var(--cat);
+}
+
+/* ── UNCOVERED chip — same ring, hollow center, italic muted name ── */
+
+.chip[data-covered="false"] .chipDot {
+  background: transparent;
+}
+
+.chip[data-covered="false"] .chipLeaf {
+  font-style: italic;
   color: var(--ink-3);
-}
-
-.chipCountX {
-  color: var(--ink-4);
-  font-size: 10px;
-}
-
-.chipCountNum {
-  color: var(--ink);
-  font-weight: 600;
 }
 
 /* ── Empty state ── */
@@ -107,7 +135,7 @@
   border-radius: 2px;
 }
 
-/* ── Edit goals: mono uppercase link, far right ── */
+/* ── Edit goals link ── */
 
 .editLink {
   flex-shrink: 0;

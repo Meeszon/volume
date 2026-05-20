@@ -58,7 +58,8 @@
       "PowerShell(npx vitest run src/features/schedule --reporter=default 2>&1 | Select-Object -Last 30)",
       "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -Last 20)",
       "PowerShell(npx vitest run --reporter=default 2>&1 | Select-Object -Last 60)",
-      "PowerShell(npx vitest run src/hooks/useWeekActivities.test.ts --reporter=default 2>&1 | Select-Object -Last 20)"
+      "PowerShell(npx vitest run src/hooks/useWeekActivities.test.ts --reporter=default 2>&1 | Select-Object -Last 20)",
+      "Bash(node *)"
     ]
   }
 }
