@@ -49,7 +49,11 @@
       "Skill(to-prd)",
       "Skill(to-issues)",
       "Bash(gh run *)",
-      "Bash(git *)"
+      "Bash(git *)",
+      "Read(//c/Users/meesz/Downloads/**)",
+      "Read(//c/Users/meesz/**)",
+      "Bash(dir *)",
+      "PowerShell(Expand-Archive *)"
     ]
   }
 }

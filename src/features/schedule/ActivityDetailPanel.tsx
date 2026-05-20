@@ -5,6 +5,7 @@ import type { LogData } from "../../hooks/useActivityLog";
 import { KIND_CONFIG } from "../../data/kindConfig";
 import { intentLabel } from "../../lib/intentResolver";
 import { describeExercise } from "../../lib/block";
+import { getActivityCategoryColor } from "../../lib/categoryColor";
 import { XIcon, TrashIcon } from "../../components/icons";
 import styles from "./ActivityDetailPanel.module.css";
 
@@ -71,7 +72,10 @@ export function ActivityDetailPanel({
       >
         <div className={styles.panelHeader}>
           <div className={styles.panelHeaderLeft}>
-            <div className={styles.panelAccent} style={{ backgroundColor: activity.accent }} />
+            <div
+              className={styles.panelAccent}
+              style={{ backgroundColor: getActivityCategoryColor(activity) }}
+            />
             <div>
               <div className={styles.panelTitle}>{headerTitle}</div>
               <div className={styles.panelType}>

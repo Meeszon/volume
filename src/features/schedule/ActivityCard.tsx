@@ -1,9 +1,11 @@
 import { useState } from "react";
+import type { CSSProperties } from "react";
 import type { DraggableProvided, DraggableStateSnapshot } from "@hello-pangea/dnd";
 import type { Activity } from "../../types";
 import { TrashIcon, CheckIcon } from "../../components/icons";
 import { KIND_CONFIG } from "../../data/kindConfig";
 import { intentLabel } from "../../lib/intentResolver";
+import { getActivityCategoryColor } from "../../lib/categoryColor";
 import styles from "./schedule.module.css";
 
 interface ActivityCardProps {
@@ -25,10 +27,16 @@ export function ActivityCard({
 }: ActivityCardProps) {
   const [confirming, setConfirming] = useState(false);
   const kindCfg = KIND_CONFIG[task.kind];
-  const subtitle =
+  const intent =
     task.kind === "warmup"
       ? (task.block?.name ?? "")
       : intentLabel(task.intentLeafId);
+  const cat = getActivityCategoryColor(task);
+
+  const cardStyle: CSSProperties = {
+    ...provided.draggableProps.style,
+    ["--cat" as string]: cat,
+  };
 
   return (
     <div
@@ -39,32 +47,34 @@ export function ActivityCard({
         styles.activityCard,
         "activity-card",
         snapshot.isDragging ? styles.dragging : "",
-        isLogged ? styles.loggedCard : "",
       ]
         .filter(Boolean)
         .join(" ")}
-      style={provided.draggableProps.style}
+      style={cardStyle}
       onClick={() => {
         if (!confirming && !snapshot.isDragging) onOpenPanel(task);
       }}
     >
-      <div className={styles.cardSeparator} style={{ backgroundColor: task.accent }} />
-      <div className={styles.cardText}>
-        <span
-          className={styles.cardTitle}
-          data-testid="kind-chip"
-          style={{ color: kindCfg.color }}
-        >
-          {kindCfg.label}
-        </span>
-        {subtitle && <span className={styles.cardSubtitle}>{subtitle}</span>}
-      </div>
-
-      {isLogged && !confirming && (
-        <div className={styles.loggedBadge}>
-          <CheckIcon />
+      <div className={styles.cardStrip} />
+      <div className={styles.cardBody}>
+        <div className={styles.cardEyebrow}>
+          <span className={styles.cardKind} data-testid="kind-chip">
+            {kindCfg.label.toUpperCase()}
+          </span>
+          <span className={styles.cardEyebrowRight}>
+            {isLogged && (
+              <span
+                className={styles.cardLogged}
+                aria-label="Logged"
+                data-testid="logged-check"
+              >
+                <CheckIcon />
+              </span>
+            )}
+          </span>
         </div>
-      )}
+        {intent && <div className={styles.cardIntent}>{intent}</div>}
+      </div>
 
       <div className={styles.cardMenu}>
         {confirming ? (

@@ -14,7 +14,6 @@ const task: Activity = {
   kind: "climb",
   intentLeafId: "footwork",
   block: null,
-  accent: "#F5A623",
 };
 
 const provided = {
@@ -25,7 +24,13 @@ const provided = {
 
 const snapshot = { isDragging: false } as DraggableStateSnapshot;
 
-function renderCard(overrides: Partial<Activity> = {}, onDelete = vi.fn()) {
+function renderCard(
+  overrides: Partial<Activity> = {},
+  {
+    onDelete = vi.fn(),
+    isLogged = false,
+  }: { onDelete?: (id: string) => void; isLogged?: boolean } = {},
+) {
   return render(
     <ActivityCard
       task={{ ...task, ...overrides }}
@@ -33,15 +38,15 @@ function renderCard(overrides: Partial<Activity> = {}, onDelete = vi.fn()) {
       snapshot={snapshot}
       onDelete={onDelete}
       onOpenPanel={vi.fn()}
-      isLogged={false}
+      isLogged={isLogged}
     />,
   );
 }
 
 describe("ActivityCard", () => {
-  it("renders the Kind chip", () => {
+  it("renders the KIND eyebrow in uppercase", () => {
     renderCard();
-    expect(screen.getByTestId("kind-chip").textContent).toBe("Climb");
+    expect(screen.getByTestId("kind-chip").textContent).toBe("CLIMB");
   });
 
   it("renders the intent leaf label", () => {
@@ -59,7 +64,7 @@ describe("ActivityCard", () => {
     expect(screen.queryByText("Footwork")).toBeNull();
   });
 
-  it("renders the block name as subtitle for Warmup", () => {
+  it("renders the block name as the main label for Warmup", () => {
     renderCard({
       kind: "warmup",
       intentLeafId: null,
@@ -70,7 +75,7 @@ describe("ActivityCard", () => {
         ],
       },
     });
-    expect(screen.getByTestId("kind-chip").textContent).toBe("Warmup");
+    expect(screen.getByTestId("kind-chip").textContent).toBe("WARMUP");
     expect(screen.getByText("General Warmup")).toBeTruthy();
   });
 
@@ -85,8 +90,18 @@ describe("ActivityCard", () => {
         ],
       },
     });
-    expect(screen.getByTestId("kind-chip").textContent).toBe("Train");
+    expect(screen.getByTestId("kind-chip").textContent).toBe("TRAIN");
     expect(screen.getByText("Finger Strength")).toBeTruthy();
+  });
+
+  it("renders the inline logged check when isLogged is true", () => {
+    renderCard({}, { isLogged: true });
+    expect(screen.getByTestId("logged-check")).toBeTruthy();
+  });
+
+  it("does not render the logged check when isLogged is false", () => {
+    renderCard();
+    expect(screen.queryByTestId("logged-check")).toBeNull();
   });
 
   it("shows a delete button", () => {
@@ -105,7 +120,7 @@ describe("ActivityCard", () => {
   it("calls onDelete with activity id when confirmed", async () => {
     const onDelete = vi.fn();
     const user = userEvent.setup();
-    renderCard({}, onDelete);
+    renderCard({}, { onDelete });
     await user.click(screen.getByRole("button", { name: /delete/i }));
     await user.click(screen.getByRole("button", { name: /confirm/i }));
     expect(onDelete).toHaveBeenCalledWith("a1");
@@ -114,7 +129,7 @@ describe("ActivityCard", () => {
   it("does not call onDelete when cancel is clicked", async () => {
     const onDelete = vi.fn();
     const user = userEvent.setup();
-    renderCard({}, onDelete);
+    renderCard({}, { onDelete });
     await user.click(screen.getByRole("button", { name: /delete/i }));
     await user.click(screen.getByRole("button", { name: /cancel/i }));
     expect(onDelete).not.toHaveBeenCalled();

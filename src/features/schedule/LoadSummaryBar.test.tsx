@@ -51,7 +51,7 @@ describe("LoadSummaryBar", () => {
     renderBar([], []);
     expect(screen.getByText(/no goals set/i)).toBeTruthy();
     const cta = screen.getByRole("link", {
-      name: /pick goals on the skill tree/i,
+      name: /select goals from the skill tree/i,
     });
     expect(cta.getAttribute("href")).toBe("/goals");
   });

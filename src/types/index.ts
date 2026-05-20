@@ -49,7 +49,6 @@ export interface Activity {
   kind: Kind;
   intentLeafId: string | null;
   block: Block | null;
-  accent: string;
 }
 
 export interface Day {

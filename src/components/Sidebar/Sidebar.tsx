@@ -1,27 +1,24 @@
 import { NavLink } from "react-router-dom";
-import {
-  ScheduleIcon,
-  ActivitiesIcon,
-  GoalsIcon,
-  ChevronDownIcon,
-} from "../icons";
+import { VolumeMark } from "../Brand/VolumeMark";
 import styles from "./Sidebar.module.css";
 
 const NAV_ITEMS = [
-  { to: "/schedule", label: "Schedule", icon: <ScheduleIcon /> },
-  { to: "/activities", label: "Activities", icon: <ActivitiesIcon /> },
-  { to: "/goals", label: "Skill Tree", icon: <GoalsIcon /> },
+  { to: "/schedule", label: "Schedule" },
+  { to: "/activities", label: "Activities" },
+  { to: "/goals", label: "Skill Tree" },
 ] as const;
 
 export function Sidebar() {
   return (
     <aside className={styles.sidebar}>
-      <div className={styles.sidebarBrand}>
-        <span className={styles.sidebarTitle}>Volume</span>
-        <ChevronDownIcon />
+      <div className={styles.brand}>
+        <div className={styles.brandMark}>
+          <VolumeMark />
+        </div>
+        <div className={styles.brandText}>VOLUME</div>
       </div>
-      <nav className={styles.sidebarNav}>
-        {NAV_ITEMS.map(({ to, label, icon }) => (
+      <nav className={styles.nav}>
+        {NAV_ITEMS.map(({ to, label }) => (
           <NavLink
             key={to}
             to={to}
@@ -29,7 +26,7 @@ export function Sidebar() {
               `${styles.navItem}${isActive ? ` ${styles.active}` : ""}`
             }
           >
-            {icon}
+            <span className={styles.navDot} aria-hidden />
             <span>{label}</span>
           </NavLink>
         ))}

@@ -36,16 +36,14 @@ function dayIdToISODate(dayId: string, weekMonday: Date): string {
 }
 
 function dbActivityToUi(dbAct: DbActivity): Activity | null {
-  const cfg = KIND_CONFIG[dbAct.kind];
   // Legacy rows (pre-migration 002) lack a valid `kind` column — skip them
   // rather than crash. Applying 002_intent_model.sql clears these.
-  if (!cfg) return null;
+  if (!KIND_CONFIG[dbAct.kind]) return null;
   return {
     id: dbAct.id,
     kind: dbAct.kind,
     intentLeafId: dbAct.intent_leaf_id,
     block: dbAct.block,
-    accent: cfg.color,
   };
 }
 

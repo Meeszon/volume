@@ -39,3 +39,16 @@ export function isCurrentWeek(monday: Date, today?: Date): boolean {
   const currentMonday = getMonday(today ?? new Date());
   return monday.getTime() === currentMonday.getTime();
 }
+
+// ISO-8601 week number. Weeks start on Monday; week 1 is the week containing
+// the first Thursday of the year (equivalently: the week containing Jan 4th).
+export function getISOWeekNumber(date: Date): number {
+  // Work in UTC against a day-only copy to avoid DST / TZ drift.
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  // ISO weekday: Mon=1 … Sun=7
+  const isoDay = d.getUTCDay() || 7;
+  // Shift to the Thursday in the same ISO week.
+  d.setUTCDate(d.getUTCDate() + 4 - isoDay);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+}
