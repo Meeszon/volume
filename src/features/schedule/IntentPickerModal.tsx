@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import type { CSSProperties } from "react";
 import { CATEGORY_COLORS, SKILL_TREE } from "../../data/skillTree";
 import { getIconFor } from "../../data/iconMap";
 import { isLeaf } from "../../utils/tree";
@@ -20,6 +21,9 @@ interface IntentPickerModalProps {
   recentIds: string[];
   onClose: () => void;
   onSelect: (leafId: string) => void;
+  /** When true, render only the inner content (no overlay/modal wrapper).
+   * Used by AddActivityModal so the persistent shell handles the frame. */
+  embedded?: boolean;
 }
 
 type Tab = "all" | "goals" | "recents";
@@ -45,6 +49,7 @@ export function IntentPickerModal({
   recentIds,
   onClose,
   onSelect,
+  embedded = false,
 }: IntentPickerModalProps) {
   const { goals } = useGoals();
   const [tab, setTab] = useState<Tab>("all");
@@ -96,7 +101,7 @@ export function IntentPickerModal({
               onClick={() => setDrillCategoryId(null)}
               aria-label="Back to categories"
             >
-              ← Back
+              <span aria-hidden="true">←</span> Back
             </button>
             <span className={styles.drillTitle}>{drillCategory.label}</span>
           </div>
@@ -236,49 +241,70 @@ export function IntentPickerModal({
     );
   };
 
+  const modalStyle = {
+    ["--kind-color" as string]: KIND_CONFIG[kind].color,
+  } as CSSProperties;
+
+  const content = (
+    <>
+      <div className={styles.modalHeader}>
+        <div className={styles.modalHeaderLeft}>
+          <span className={styles.eyebrow}>{dayLabel}</span>
+          <h1 className={styles.modalTitle}>
+            Add {KIND_CONFIG[kind].label} · Intent
+          </h1>
+        </div>
+        <button
+          type="button"
+          className={styles.closeBtn}
+          onClick={onClose}
+          aria-label="Close"
+        >
+          ×
+        </button>
+      </div>
+
+      <div className={styles.tabBar} role="tablist">
+        {TAB_ORDER.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            aria-selected={tab === t.id}
+            className={`${styles.tab} ${tab === t.id ? styles.tabActive : ""}`}
+            onClick={() => setTab(t.id)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      <div className={styles.body}>
+        {tab === "all" && renderAllTab()}
+        {tab === "goals" && renderGoalsTab()}
+        {tab === "recents" && renderRecentsTab()}
+      </div>
+
+      {renderJustClimbingPin()}
+    </>
+  );
+
+  if (embedded) {
+    return content;
+  }
+
   return (
     <div
       className={styles.overlay}
       data-testid="modal-overlay"
       onClick={onClose}
     >
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-        <div className={styles.modalHeader}>
-          <span className={styles.modalTitle}>
-            Add {KIND_CONFIG[kind].label} · Intent — {dayLabel}
-          </span>
-          <button
-            type="button"
-            className={styles.closeBtn}
-            onClick={onClose}
-            aria-label="Close"
-          >
-            ×
-          </button>
-        </div>
-
-        <div className={styles.tabBar} role="tablist">
-          {TAB_ORDER.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              role="tab"
-              aria-selected={tab === t.id}
-              className={`${styles.tab} ${tab === t.id ? styles.tabActive : ""}`}
-              onClick={() => setTab(t.id)}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        <div className={styles.body}>
-          {tab === "all" && renderAllTab()}
-          {tab === "goals" && renderGoalsTab()}
-          {tab === "recents" && renderRecentsTab()}
-        </div>
-
-        {renderJustClimbingPin()}
+      <div
+        className={styles.modal}
+        onClick={(e) => e.stopPropagation()}
+        style={modalStyle}
+      >
+        {content}
       </div>
     </div>
   );

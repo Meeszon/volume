@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { KIND_CONFIG } from "../../data/kindConfig";
 import { warmupLibrary } from "../../data/warmupLibrary";
 import { getIntentLeaf, intentLabel } from "../../lib/intentResolver";
@@ -10,7 +11,6 @@ import {
   DurationPickerModal,
   type DurationMinutes,
 } from "./DurationPickerModal";
-import { hexPoints } from "../../utils/hex";
 import type { Block, Kind, TreeLeaf } from "../../types";
 import type { AddActivityInput } from "../../hooks/useWeekActivities";
 import styles from "./AddActivityModal.module.css";
@@ -23,25 +23,13 @@ interface AddActivityModalProps {
 
 const KIND_ORDER: Kind[] = ["climb", "warmup", "train"];
 
-function CoordHex({ color }: { color: string }) {
-  const size = 28;
-  const glowR = Math.round(size * 1.25);
-  const svgSize = glowR * 2 + 4;
-  const cx = svgSize / 2;
-  const cy = svgSize / 2;
-  return (
-    <svg
-      className={styles.hexMarker}
-      width={svgSize}
-      height={svgSize}
-      style={{ ["--kind-color" as string]: color }}
-      aria-hidden="true"
-    >
-      <polygon className="glow" points={hexPoints(cx, cy, glowR)} />
-      <polygon className="core" points={hexPoints(cx, cy, size)} />
-    </svg>
-  );
-}
+const KIND_TRAIL: Record<Kind, string[]> = {
+  climb: ["Intent", "Duration"],
+  warmup: ["Routine"],
+  train: ["Intent", "Block"],
+};
+
+type StepName = "kind" | "intent" | "duration" | "block-list" | "block-editor";
 
 export function AddActivityModal({
   dayLabel,
@@ -98,10 +86,17 @@ export function AddActivityModal({
     onClose();
   };
 
+  let stepName: StepName;
+  let stepKey: string;
+  let stepContent: ReactNode;
+
   if (pickedKind === "climb") {
     if (climbLeafId) {
-      return (
+      stepName = "duration";
+      stepKey = `climb-duration:${climbLeafId}`;
+      stepContent = (
         <DurationPickerModal
+          embedded
           dayLabel={dayLabel}
           intentLabel={intentLabel(climbLeafId)}
           onClose={onClose}
@@ -109,58 +104,74 @@ export function AddActivityModal({
           onSelect={handleClimbDurationSelected}
         />
       );
-    }
-    return (
-      <IntentPickerModal
-        dayLabel={dayLabel}
-        kind="climb"
-        recentIds={recents}
-        onClose={onClose}
-        onSelect={handleClimbIntentSelected}
-      />
-    );
-  }
-
-  if (pickedKind === "warmup") {
-    if (pickedBlock) {
-      return (
-        <BlockEditor
+    } else {
+      stepName = "intent";
+      stepKey = "climb-intent";
+      stepContent = (
+        <IntentPickerModal
+          embedded
           dayLabel={dayLabel}
-          kindLabel={KIND_CONFIG.warmup.label}
+          kind="climb"
+          recentIds={recents}
+          onClose={onClose}
+          onSelect={handleClimbIntentSelected}
+        />
+      );
+    }
+  } else if (pickedKind === "warmup") {
+    if (pickedBlock) {
+      stepName = "block-editor";
+      stepKey = `warmup-editor:${pickedBlock.name}`;
+      stepContent = (
+        <BlockEditor
+          embedded
+          dayLabel={dayLabel}
+          kind="warmup"
           block={pickedBlock}
           onBack={() => setPickedBlock(null)}
           onClose={onClose}
           onSubmit={handleWarmupSubmit}
         />
       );
-    }
-    return (
-      <BlockListPicker
-        title={`Add Warmup — ${dayLabel}`}
-        blocks={warmupLibrary}
-        onSelect={setPickedBlock}
-        onClose={onClose}
-      />
-    );
-  }
-
-  if (pickedKind === "train") {
-    if (trainLeaf && pickedBlock) {
-      return (
-        <BlockEditor
+    } else {
+      stepName = "block-list";
+      stepKey = "warmup-list";
+      stepContent = (
+        <BlockListPicker
+          embedded
           dayLabel={dayLabel}
-          kindLabel={KIND_CONFIG.train.label}
+          kind="warmup"
+          title="Add Warmup"
+          blocks={warmupLibrary}
+          onSelect={setPickedBlock}
+          onClose={onClose}
+        />
+      );
+    }
+  } else if (pickedKind === "train") {
+    if (trainLeaf && pickedBlock) {
+      stepName = "block-editor";
+      stepKey = `train-editor:${trainLeaf.id}:${pickedBlock.name}`;
+      stepContent = (
+        <BlockEditor
+          embedded
+          dayLabel={dayLabel}
+          kind="train"
           block={pickedBlock}
           onBack={() => setPickedBlock(null)}
           onClose={onClose}
           onSubmit={handleTrainSubmit}
         />
       );
-    }
-    if (trainLeaf) {
-      return (
+    } else if (trainLeaf) {
+      stepName = "block-list";
+      stepKey = `train-list:${trainLeaf.id}`;
+      stepContent = (
         <BlockListPicker
-          title={`Add Train · Block — ${dayLabel}`}
+          embedded
+          dayLabel={dayLabel}
+          kind="train"
+          title="Add Train · Block"
           subTitle={trainLeaf.label}
           blocks={trainLeaf.blocks ?? []}
           onSelect={setPickedBlock}
@@ -170,23 +181,30 @@ export function AddActivityModal({
           emptyMessage={`No blocks defined for ${trainLeaf.label}.`}
         />
       );
+    } else {
+      stepName = "intent";
+      stepKey = "train-intent";
+      stepContent = (
+        <IntentPickerModal
+          embedded
+          dayLabel={dayLabel}
+          kind="train"
+          recentIds={recents}
+          onClose={onClose}
+          onSelect={handleTrainIntentSelected}
+        />
+      );
     }
-    return (
-      <IntentPickerModal
-        dayLabel={dayLabel}
-        kind="train"
-        recentIds={recents}
-        onClose={onClose}
-        onSelect={handleTrainIntentSelected}
-      />
-    );
-  }
-
-  return (
-    <div className={styles.overlay} data-testid="modal-overlay" onClick={onClose}>
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+  } else {
+    stepName = "kind";
+    stepKey = "kind";
+    stepContent = (
+      <>
         <div className={styles.modalHeader}>
-          <span className={styles.modalTitle}>Add Activity — {dayLabel}</span>
+          <div className={styles.modalHeaderLeft}>
+            <span className={styles.eyebrow}>{dayLabel}</span>
+            <h1 className={styles.modalTitle}>Add Activity</h1>
+          </div>
           <button
             type="button"
             className={styles.closeBtn}
@@ -197,22 +215,69 @@ export function AddActivityModal({
           </button>
         </div>
 
-        <div className={styles.categoryGrid}>
+        <div className={styles.kindList}>
           {KIND_ORDER.map((kind) => {
             const cfg = KIND_CONFIG[kind];
+            const trail = KIND_TRAIL[kind];
+            const cardStyle = {
+              ["--kind-color" as string]: cfg.color,
+            } as CSSProperties;
             return (
               <button
                 type="button"
                 key={kind}
-                className={styles.categoryBtn}
+                className={styles.kindCard}
                 onClick={() => setPickedKind(kind)}
                 aria-label={cfg.label}
+                style={cardStyle}
               >
-                <CoordHex color={cfg.color} />
-                <span className={styles.categoryLabel}>{cfg.label}</span>
+                <div className={styles.kindStrip} aria-hidden="true" />
+                <div className={styles.kindBody}>
+                  <span className={styles.kindLabel}>{cfg.label}</span>
+                  <span className={styles.kindTrail}>
+                    {trail.map((step, i) => (
+                      <span key={step}>
+                        {i > 0 && (
+                          <span className={styles.kindTrailDot}> · </span>
+                        )}
+                        {step}
+                      </span>
+                    ))}
+                  </span>
+                </div>
+                <span className={styles.kindArrow} aria-hidden="true">
+                  →
+                </span>
               </button>
             );
           })}
+        </div>
+
+        <div className={styles.footnote}>Choose a kind</div>
+      </>
+    );
+  }
+
+  const modalStyle: CSSProperties | undefined = pickedKind
+    ? ({
+        ["--kind-color" as string]: KIND_CONFIG[pickedKind].color,
+      } as CSSProperties)
+    : undefined;
+
+  return (
+    <div
+      className={styles.overlay}
+      data-testid="modal-overlay"
+      onClick={onClose}
+    >
+      <div
+        className={styles.modal}
+        data-step={stepName}
+        onClick={(e) => e.stopPropagation()}
+        style={modalStyle}
+      >
+        <div key={stepKey} className={styles.stepLayer}>
+          {stepContent}
         </div>
       </div>
     </div>

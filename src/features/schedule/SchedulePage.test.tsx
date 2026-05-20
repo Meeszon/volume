@@ -157,7 +157,7 @@ describe("SchedulePage", () => {
       await user.click(addButtons[0]);
 
       expect(screen.getByTestId("modal-overlay")).toBeTruthy();
-      expect(screen.getByText(/Add Activity —/)).toBeTruthy();
+      expect(screen.getByText("Add Activity")).toBeTruthy();
     });
 
     it("completing the Climb flow (intent → duration) calls addActivity and closes the modal", async () => {

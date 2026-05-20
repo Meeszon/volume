@@ -124,7 +124,7 @@ describe("AddActivityModal", () => {
 
     it("Warmup opens the WarmupPicker, not an Intent picker", async () => {
       await gotoWarmupPicker();
-      expect(screen.getByText(/add warmup —/i)).toBeTruthy();
+      expect(screen.getByText(/add warmup/i)).toBeTruthy();
       // No Intent tabs in Warmup flow
       expect(screen.queryByRole("tab", { name: /all/i })).toBeNull();
     });
@@ -168,7 +168,7 @@ describe("AddActivityModal", () => {
       const user = await gotoWarmupPicker();
       await user.click(screen.getByRole("button", { name: /general warmup/i }));
       await user.click(screen.getByRole("button", { name: /^back$/i }));
-      expect(screen.getByText(/add warmup —/i)).toBeTruthy();
+      expect(screen.getByText(/add warmup/i)).toBeTruthy();
       expect(screen.getByRole("button", { name: /wall warmup/i })).toBeTruthy();
     });
   });
