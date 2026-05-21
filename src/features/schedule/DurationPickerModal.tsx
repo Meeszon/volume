@@ -3,7 +3,7 @@ import { KIND_CONFIG } from "../../data/kindConfig";
 import frameStyles from "./BlockEditor.module.css";
 import styles from "./DurationPickerModal.module.css";
 
-export const DURATION_OPTIONS = [60, 90, 120, 150] as const;
+const DURATION_OPTIONS = [60, 90, 120, 150] as const;
 
 export type DurationMinutes = (typeof DURATION_OPTIONS)[number];
 
