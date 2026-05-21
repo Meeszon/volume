@@ -1,0 +1,116 @@
+/* Duration tiles — chalk "stamp" tiles with display-font number and a
+ * climb-color tape mark along the top edge. Sized for a 2×2 grid. */
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 18px 22px;
+}
+
+.bodyLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  line-height: 1;
+}
+
+.bodyLabel::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: repeating-linear-gradient(
+    to right,
+    rgba(26, 24, 20, 0.16) 0 3px,
+    transparent 3px 7px
+  );
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 116px;
+  padding: 22px 12px 18px;
+  background: white;
+  border: 1px solid rgba(26, 24, 20, 0.12);
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--ink);
+  overflow: hidden;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.7) inset,
+    0 1px 2px rgba(20, 16, 10, 0.04);
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+/* Top-edge "tape mark" — neutral by default, tints toward climb amber on
+ * hover. No length change or transform — kept minimal. */
+.tile::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 12px;
+  right: 12px;
+  height: 3px;
+  background: rgba(26, 24, 20, 0.14);
+  border-radius: 0 0 2px 2px;
+  transition: background 0.15s ease;
+}
+
+.tile:hover {
+  background-color: var(--chalk);
+  border-color: rgba(26, 24, 20, 0.22);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.7) inset,
+    0 1px 2px rgba(20, 16, 10, 0.05),
+    0 4px 10px rgba(20, 16, 10, 0.06);
+}
+
+.tile:hover::before {
+  background: #F5A623;
+}
+
+.tile:focus-visible {
+  outline: 2px solid rgba(26, 24, 20, 0.2);
+  outline-offset: 2px;
+}
+
+.time {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 34px;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+  line-height: 1;
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  color: var(--ink-4);
+  text-transform: uppercase;
+  line-height: 1;
+}

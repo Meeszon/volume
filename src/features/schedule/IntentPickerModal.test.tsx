@@ -44,7 +44,8 @@ describe("IntentPickerModal", () => {
   describe("header", () => {
     it("shows the Kind-aware title and the day label", () => {
       renderPicker({ kind: "climb" });
-      expect(screen.getByText(/add climb · intent — monday 28 apr/i)).toBeTruthy();
+      expect(screen.getByText(/add climb · intent/i)).toBeTruthy();
+      expect(screen.getByText(/monday 28 apr/i)).toBeTruthy();
     });
 
     it("clicking overlay calls onClose", async () => {

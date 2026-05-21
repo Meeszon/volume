@@ -63,30 +63,48 @@ describe("AddActivityModal", () => {
       expect(screen.getByText(/add climb · intent/i)).toBeTruthy();
     });
 
-    it("Just Climbing is reachable and submits the synthetic leaf id", async () => {
+    it("Just Climbing is reachable; after duration pick onAdd carries the synthetic leaf id and the chosen duration", async () => {
       const user = await gotoClimbIntent();
       await user.click(screen.getByRole("button", { name: /just climbing/i }));
+      // Now on the duration picker
+      expect(screen.getByText(/add climb · duration/i)).toBeTruthy();
+      await user.click(screen.getByTestId("duration-option-60"));
       expect(onAdd).toHaveBeenCalledWith({
         kind: "climb",
         intentLeafId: JUST_CLIMBING_LEAF_ID,
         block: null,
+        durationMinutes: 60,
       });
       expect(onClose).toHaveBeenCalled();
     });
 
-    it("drilling into a category and picking a leaf submits that leaf id", async () => {
+    it("drilling into a category and picking a leaf advances to the duration picker, then submits with the leaf id + duration", async () => {
       const user = await gotoClimbIntent();
       await user.click(screen.getByRole("button", { name: /^technique$/i }));
       await user.click(screen.getByRole("button", { name: /^footwork$/i }));
+      expect(screen.getByText(/add climb · duration/i)).toBeTruthy();
+      // Picked intent shows as the duration picker's subtitle
+      expect(screen.getByText("Footwork")).toBeTruthy();
+      await user.click(screen.getByTestId("duration-option-150"));
       expect(onAdd).toHaveBeenCalledWith({
         kind: "climb",
         intentLeafId: "footwork",
         block: null,
+        durationMinutes: 150,
       });
       expect(onClose).toHaveBeenCalled();
     });
 
-    it("recording the pick updates the volume:recentIntents localStorage entry", async () => {
+    it("the duration picker Back button returns to the IntentPickerModal", async () => {
+      const user = await gotoClimbIntent();
+      await user.click(screen.getByRole("button", { name: /^technique$/i }));
+      await user.click(screen.getByRole("button", { name: /^footwork$/i }));
+      await user.click(screen.getByRole("button", { name: /back to intent/i }));
+      expect(screen.getByText(/add climb · intent/i)).toBeTruthy();
+      expect(onAdd).not.toHaveBeenCalled();
+    });
+
+    it("recording the pick updates the volume:recentIntents localStorage entry (at intent selection, before duration)", async () => {
       const user = await gotoClimbIntent();
       await user.click(screen.getByRole("button", { name: /^technique$/i }));
       await user.click(screen.getByRole("button", { name: /^footwork$/i }));
@@ -106,7 +124,7 @@ describe("AddActivityModal", () => {
 
     it("Warmup opens the WarmupPicker, not an Intent picker", async () => {
       await gotoWarmupPicker();
-      expect(screen.getByText(/add warmup —/i)).toBeTruthy();
+      expect(screen.getByText(/add warmup/i)).toBeTruthy();
       // No Intent tabs in Warmup flow
       expect(screen.queryByRole("tab", { name: /all/i })).toBeNull();
     });
@@ -150,7 +168,7 @@ describe("AddActivityModal", () => {
       const user = await gotoWarmupPicker();
       await user.click(screen.getByRole("button", { name: /general warmup/i }));
       await user.click(screen.getByRole("button", { name: /^back$/i }));
-      expect(screen.getByText(/add warmup —/i)).toBeTruthy();
+      expect(screen.getByText(/add warmup/i)).toBeTruthy();
       expect(screen.getByRole("button", { name: /wall warmup/i })).toBeTruthy();
     });
   });

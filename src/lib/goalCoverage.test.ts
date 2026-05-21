@@ -14,6 +14,7 @@ function makeActivity(overrides: Partial<DbActivity>): DbActivity {
     kind: overrides.kind ?? "climb",
     intent_leaf_id: overrides.intent_leaf_id ?? null,
     block: overrides.block ?? null,
+    duration_minutes: overrides.duration_minutes ?? null,
     order: overrides.order ?? 0,
     created_at: overrides.created_at ?? "2026-05-20T00:00:00Z",
   };

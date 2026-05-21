@@ -1,156 +1,174 @@
 .bar {
-  height: 48px;
   flex-shrink: 0;
-  border-bottom: 1px solid #f0f0f0;
   display: flex;
   align-items: center;
-  padding: 0 28px;
-  gap: 24px;
+  gap: 16px;
+  padding: 10px 22px;
+  border-bottom: 1px dashed rgba(26, 24, 20, 0.16);
 }
 
-.entries {
-  display: flex;
-  align-items: center;
-  gap: 28px;
-  flex: 1;
-  overflow: hidden;
-}
+/* ── Title ── */
 
-.emptyHint {
-  font-size: 12px;
-  color: #b0afab;
-}
-
-.emptyCta {
-  color: #6b6b68;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-.emptyCta:hover {
-  color: #413f39;
-}
-
-.entry {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.title {
   flex-shrink: 0;
-}
-
-.entryDot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.entryLabel {
-  font-size: 12px;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 9px;
+  padding-right: 14px;
+  border-right: 1px dashed rgba(26, 24, 20, 0.16);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
   font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
   white-space: nowrap;
-  color: #413f39;
 }
 
-.progressTrack {
-  width: 72px;
-  height: 5px;
-  background: #f0f0f0;
-  border-radius: 9999px;
-  overflow: hidden;
-  flex-shrink: 0;
+.titleTally {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 1px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  background: rgba(26, 24, 20, 0.05);
+  color: var(--ink-2);
 }
 
-.progressFill {
-  height: 100%;
-  border-radius: 9999px;
-  transition: width 0.3s ease;
+.titleTally[data-all-covered="false"] {
+  background: rgba(192, 57, 43, 0.08);
+  color: #8a2e1f;
+}
+
+.titleTallyNum { font-weight: 700; }
+.titleTallySlash {
+  margin: 0 1px;
+  color: var(--ink-4);
+  font-weight: 400;
+}
+.titleTallyDenom { font-weight: 500; }
+
+/* ── Chip row ── */
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  flex: 1;
   min-width: 0;
 }
 
-.entryCount {
-  font-size: 12px;
-  color: #9d9c99;
-  white-space: nowrap;
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
 }
 
-/* ── Settings cog ── */
-
-.cogWrap {
-  position: relative;
+.chipDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid color-mix(in srgb, var(--cat) 65%, var(--ink-2));
   flex-shrink: 0;
 }
 
-.cogBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: none;
-  background: transparent;
-  border-radius: 4px;
-  cursor: pointer;
-  padding: 0;
-}
-
-.cogBtn:hover {
-  background: #f5f5f5;
-}
-
-/* ── Popover ── */
-
-.popover {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 6px);
-  background: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  padding: 12px 14px;
-  min-width: 186px;
-  z-index: 10;
-}
-
-.popoverTitle {
+.chipLeaf {
+  font-family: var(--font-ui);
   font-size: 12px;
-  font-weight: 600;
-  color: #413f39;
-  margin-bottom: 10px;
+  font-weight: 500;
+  color: var(--ink);
+  white-space: nowrap;
+  letter-spacing: -0.005em;
 }
 
-.popoverRow {
-  display: flex;
+/* ── COVERED chip — ring filled in with category color ── */
+
+.chip[data-covered="true"] .chipDot {
+  background: var(--cat);
+}
+
+/* ── UNCOVERED chip — same ring, hollow center, italic muted name ── */
+
+.chip[data-covered="false"] .chipDot {
+  background: transparent;
+}
+
+.chip[data-covered="false"] .chipLeaf {
+  font-style: italic;
+  color: var(--ink-3);
+}
+
+/* ── Empty state ── */
+
+.emptyHint {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-style: italic;
+  color: var(--ink-4);
+}
+
+.inlineLink {
+  color: var(--ink-3);
+  font-style: italic;
+  text-decoration: underline;
+  text-decoration-color: rgba(26, 24, 20, 0.25);
+  text-underline-offset: 2px;
+  transition: color 0.12s ease, text-decoration-color 0.12s ease;
+}
+
+.inlineLink:hover {
+  color: var(--ink);
+  text-decoration-color: var(--ink);
+}
+
+.inlineLink:focus-visible {
+  outline: 1px dashed var(--ink-3);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* ── Edit goals link ── */
+
+.editLink {
+  flex-shrink: 0;
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 8px;
-  cursor: default;
+  gap: 6px;
+  margin-left: auto;
+  padding: 0 2px;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-style: italic;
+  color: var(--ink-3);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 0.12s ease, text-decoration-color 0.12s ease;
 }
 
-.popoverRow:last-child {
-  margin-bottom: 0;
+.editLink span {
+  text-decoration: underline;
+  text-decoration-color: rgba(26, 24, 20, 0.25);
+  text-underline-offset: 3px;
+  transition: text-decoration-color 0.12s ease;
 }
 
-.popoverLabel {
-  font-size: 13px;
-  color: #787878;
+.editLink:hover {
+  color: var(--ink);
 }
 
-.popoverInput {
-  width: 48px;
-  height: 26px;
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
-  text-align: center;
-  font-size: 13px;
-  font-family: inherit;
-  color: #413f39;
-  padding: 0 4px;
+.editLink:hover span {
+  text-decoration-color: var(--ink);
 }
 
-.popoverInput:focus {
-  outline: none;
-  border-color: #b0afab;
+.editLink:focus-visible {
+  outline: 1px dashed var(--ink-3);
+  outline-offset: 4px;
 }

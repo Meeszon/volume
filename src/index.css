@@ -13,9 +13,9 @@ body {
 }
 
 body {
-  font-family: 'Space Grotesk', system-ui, sans-serif;
-  background-color: #ecedee;
-  color: #413f39;
+  font-family: var(--font-ui);
+  background-color: var(--wall-base);
+  color: var(--ink);
 }
 
 #root {

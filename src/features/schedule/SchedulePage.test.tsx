@@ -52,7 +52,7 @@ describe("SchedulePage", () => {
     vi.clearAllMocks();
   });
 
-  it("shows 'Rest Day' for every day when all columns are empty", () => {
+  it("shows 'Rest day' for every day when all columns are empty", () => {
     mockUseWeekActivities.mockReturnValue({
       columns: EMPTY_COLUMNS,
       activities: [],
@@ -65,11 +65,11 @@ describe("SchedulePage", () => {
 
     renderSchedule();
 
-    const restDays = screen.getAllByText("Rest Day");
+    const restDays = screen.getAllByText("Rest day");
     expect(restDays).toHaveLength(7);
   });
 
-  it("does not show 'Rest Day' for a day that has activities", () => {
+  it("does not show 'Rest day' for a day that has activities", () => {
     const columns: Columns = {
       ...EMPTY_COLUMNS,
       Monday: [
@@ -78,7 +78,7 @@ describe("SchedulePage", () => {
           kind: "climb",
           intentLeafId: "footwork",
           block: null,
-          accent: "#F5A623",
+          durationMinutes: 90,
         },
       ],
     };
@@ -95,11 +95,11 @@ describe("SchedulePage", () => {
 
     renderSchedule();
 
-    const restDays = screen.getAllByText("Rest Day");
+    const restDays = screen.getAllByText("Rest day");
     expect(restDays).toHaveLength(6);
   });
 
-  it("does not show 'Rest Day' while loading", () => {
+  it("does not show 'Rest day' while loading", () => {
     mockUseWeekActivities.mockReturnValue({
       columns: EMPTY_COLUMNS,
       activities: [],
@@ -112,7 +112,25 @@ describe("SchedulePage", () => {
 
     renderSchedule();
 
-    expect(screen.queryByText("Rest Day")).toBeNull();
+    expect(screen.queryByText("Rest day")).toBeNull();
+  });
+
+  it("renders the Week N header with date subtitle", () => {
+    mockUseWeekActivities.mockReturnValue({
+      columns: EMPTY_COLUMNS,
+      activities: [],
+      loading: false,
+      error: null,
+      addActivity: vi.fn(),
+      deleteActivity: vi.fn(),
+      handleDragEnd: vi.fn(),
+    });
+
+    renderSchedule();
+
+    expect(screen.getByText(/^Week \d+$/)).toBeTruthy();
+    // Date subtitle uses "MMM D — MMM D, YYYY" — matches anywhere
+    expect(screen.getByText(/[A-Z][a-z]{2} \d+ — [A-Z][a-z]{2} \d+, \d{4}/)).toBeTruthy();
   });
 
   describe("AddActivityModal integration", () => {
@@ -131,31 +149,37 @@ describe("SchedulePage", () => {
       });
     });
 
-    it("opens modal when clicking Add Activity button", async () => {
+    it("opens modal when clicking Add activity button", async () => {
       const user = userEvent.setup();
       renderSchedule();
 
-      const addButtons = screen.getAllByText("Add Activity");
+      const addButtons = screen.getAllByText("Add activity");
       await user.click(addButtons[0]);
 
       expect(screen.getByTestId("modal-overlay")).toBeTruthy();
-      expect(screen.getByText(/Add Activity —/)).toBeTruthy();
+      expect(screen.getByText("Add Activity")).toBeTruthy();
     });
 
-    it("completing the Climb flow calls addActivity and closes the modal", async () => {
+    it("completing the Climb flow (intent → duration) calls addActivity and closes the modal", async () => {
       const user = userEvent.setup();
       renderSchedule();
 
-      const addButtons = screen.getAllByText("Add Activity");
+      const addButtons = screen.getAllByText("Add activity");
       await user.click(addButtons[0]);
 
       await user.click(screen.getByRole("button", { name: /^climb$/i }));
       await user.click(screen.getByRole("button", { name: /^technique$/i }));
       await user.click(screen.getByRole("button", { name: /^footwork$/i }));
+      await user.click(screen.getByTestId("duration-option-90"));
 
       expect(mockAddActivity).toHaveBeenCalledWith(
         expect.any(String),
-        { kind: "climb", intentLeafId: "footwork", block: null },
+        {
+          kind: "climb",
+          intentLeafId: "footwork",
+          block: null,
+          durationMinutes: 90,
+        },
       );
       expect(screen.queryByTestId("modal-overlay")).toBeNull();
     });
@@ -164,7 +188,7 @@ describe("SchedulePage", () => {
       const user = userEvent.setup();
       renderSchedule();
 
-      const addButtons = screen.getAllByText("Add Activity");
+      const addButtons = screen.getAllByText("Add activity");
       await user.click(addButtons[0]);
       expect(screen.getByTestId("modal-overlay")).toBeTruthy();
 

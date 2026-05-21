@@ -1,0 +1,21 @@
+:root {
+  /* WALL — the page background */
+  --wall-base:  #ecedee;
+  --wall-deep:  #dcdcdc;
+  --wall-light: #f5f6f6;
+
+  /* INK — text + chrome (kept warm-near-black, not pure #000) */
+  --ink:    #1a1814;
+  --ink-2:  #3b3630;
+  --ink-3:  #6a6359;
+  --ink-4:  #8d8f92;
+
+  /* CHALK — activity card surface; off-white, slightly cooler than
+     pure white so cards don't punch off the wall */
+  --chalk:  #f6f7f8;
+
+  /* TYPE */
+  --font-display: "Bricolage Grotesque", system-ui, sans-serif;
+  --font-ui:      "Bricolage Grotesque", system-ui, sans-serif;
+  --font-mono:    "JetBrains Mono", ui-monospace, monospace;
+}

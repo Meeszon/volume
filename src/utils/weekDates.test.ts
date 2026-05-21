@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { getMonday, getWeekDays, shiftWeek, formatWeekLabel, isCurrentWeek } from "./weekDates";
+import {
+  getMonday,
+  getWeekDays,
+  shiftWeek,
+  formatWeekLabel,
+  isCurrentWeek,
+  getISOWeekNumber,
+} from "./weekDates";
 
 describe("getMonday", () => {
   it("returns the same day when given a Monday", () => {
@@ -152,5 +159,47 @@ describe("isCurrentWeek", () => {
     const today = new Date(2026, 4, 3); // Sun 3 May
     const monday = new Date(2026, 3, 27);
     expect(isCurrentWeek(monday, today)).toBe(true);
+  });
+});
+
+describe("getISOWeekNumber", () => {
+  it("returns week 21 for Wednesday 20 May 2026 (mid-year anchor)", () => {
+    expect(getISOWeekNumber(new Date(2026, 4, 20))).toBe(21);
+  });
+
+  it("returns the same week number for every day in a given ISO week", () => {
+    // Monday 18 May 2026 through Sunday 24 May 2026 are all ISO week 21.
+    for (let day = 18; day <= 24; day++) {
+      expect(getISOWeekNumber(new Date(2026, 4, day))).toBe(21);
+    }
+  });
+
+  it("returns week 53 for 31 Dec 2020 (53-week year)", () => {
+    expect(getISOWeekNumber(new Date(2020, 11, 31))).toBe(53);
+  });
+
+  it("returns week 53 for 1 Jan 2021 (belongs to ISO year 2020)", () => {
+    expect(getISOWeekNumber(new Date(2021, 0, 1))).toBe(53);
+  });
+
+  it("returns week 1 for 1 Jan 2026 (a Thursday — first ISO week of 2026)", () => {
+    expect(getISOWeekNumber(new Date(2026, 0, 1))).toBe(1);
+  });
+
+  it("returns week 52 for 1 Jan 2023 (a Sunday — last ISO week of 2022)", () => {
+    expect(getISOWeekNumber(new Date(2023, 0, 1))).toBe(52);
+  });
+
+  it("does not mutate the input date", () => {
+    const d = new Date(2026, 4, 20, 13, 45);
+    const original = d.getTime();
+    getISOWeekNumber(d);
+    expect(d.getTime()).toBe(original);
+  });
+
+  it("is time-of-day agnostic", () => {
+    const morning = new Date(2026, 4, 20, 0, 0, 0);
+    const evening = new Date(2026, 4, 20, 23, 59, 59);
+    expect(getISOWeekNumber(morning)).toBe(getISOWeekNumber(evening));
   });
 });

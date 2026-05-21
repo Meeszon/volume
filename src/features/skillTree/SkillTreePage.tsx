@@ -29,7 +29,7 @@ const L1_GLOW_R = 44;
 const L1_ICON = 18;
 const L1_FORWARD = 165;
 const L1_LATERAL = 100;
-const FONT = "'Space Grotesk', system-ui, sans-serif";
+const FONT = "'Bricolage Grotesque', system-ui, sans-serif";
 
 type View = { x: number; y: number; k: number };
 

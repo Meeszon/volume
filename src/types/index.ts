@@ -49,7 +49,7 @@ export interface Activity {
   kind: Kind;
   intentLeafId: string | null;
   block: Block | null;
-  accent: string;
+  durationMinutes: number | null;
 }
 
 export interface Day {
@@ -67,6 +67,7 @@ export interface DbActivity {
   kind: Kind;
   intent_leaf_id: string | null;
   block: Block | null;
+  duration_minutes: number | null;
   order: number;
   created_at: string;
 }

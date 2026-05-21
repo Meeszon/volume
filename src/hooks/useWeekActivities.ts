@@ -36,16 +36,15 @@ function dayIdToISODate(dayId: string, weekMonday: Date): string {
 }
 
 function dbActivityToUi(dbAct: DbActivity): Activity | null {
-  const cfg = KIND_CONFIG[dbAct.kind];
   // Legacy rows (pre-migration 002) lack a valid `kind` column — skip them
   // rather than crash. Applying 002_intent_model.sql clears these.
-  if (!cfg) return null;
+  if (!KIND_CONFIG[dbAct.kind]) return null;
   return {
     id: dbAct.id,
     kind: dbAct.kind,
     intentLeafId: dbAct.intent_leaf_id,
     block: dbAct.block,
-    accent: cfg.color,
+    durationMinutes: dbAct.duration_minutes ?? null,
   };
 }
 
@@ -77,6 +76,7 @@ export interface AddActivityInput {
   kind: Kind;
   intentLeafId: string | null;
   block: Block | null;
+  durationMinutes: number | null;
 }
 
 export function useWeekActivities(weekMonday: Date) {
@@ -144,6 +144,7 @@ export function useWeekActivities(weekMonday: Date) {
         kind: input.kind,
         intent_leaf_id: input.intentLeafId,
         block: input.block,
+        duration_minutes: input.durationMinutes,
         order,
         created_at: new Date().toISOString(),
       };
@@ -157,6 +158,7 @@ export function useWeekActivities(weekMonday: Date) {
           kind: input.kind,
           intent_leaf_id: input.intentLeafId,
           block: input.block,
+          duration_minutes: input.durationMinutes,
           order,
         });
         setDbActivities((prev) =>
@@ -202,6 +204,7 @@ export function useWeekActivities(weekMonday: Date) {
       const sourceDay = source.droppableId;
       const destDay = destination.droppableId;
       const movedActivityId = columns[sourceDay][source.index].id;
+      if (movedActivityId.startsWith("temp-")) return;
       const prev = dbActivities;
       const sameDay = sourceDay === destDay;
       const sourceDateStr = dayIdToISODate(sourceDay, weekMonday);

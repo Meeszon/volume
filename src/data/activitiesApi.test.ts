@@ -90,6 +90,7 @@ describe("activitiesApi", () => {
         kind: "train" as const,
         intent_leaf_id: "hip-mobility",
         block: null,
+        duration_minutes: null,
         order: 0,
       };
       const returned = { ...input, id: "new-id", created_at: "2026-04-28T00:00:00Z" };
@@ -120,6 +121,7 @@ describe("activitiesApi", () => {
           kind: "train",
           intent_leaf_id: "hip-mobility",
           block: null,
+          duration_minutes: null,
           order: 0,
         }),
       ).rejects.toEqual({ message: "insert failed" });
