@@ -9,5 +9,4 @@ export const JUST_CLIMBING_LEAF: TreeLeaf = {
   label: "Just Climbing",
   description: "Going to the wall to climb — no training intent.",
   allowedKinds: ["climb"],
-  exercises: [],
 };

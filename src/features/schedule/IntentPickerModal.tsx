@@ -8,7 +8,7 @@ import {
   getRecentIntentsForKind,
   getSyntheticJustClimbing,
 } from "../../lib/intentResolver";
-import { getLeafCategory } from "../../lib/skillTreeLookup";
+import { getAllLeaves, getLeafCategory } from "../../lib/skillTreeLookup";
 import { useGoals } from "../../contexts/useGoals";
 import { HexGlyph } from "../../components/HexGlyph/HexGlyph";
 import { KIND_CONFIG } from "../../data/kindConfig";
@@ -80,8 +80,8 @@ export function IntentPickerModal({
 
   const drillLeaves = useMemo<TreeLeaf[]>(() => {
     if (!drillCategory) return [];
-    return drillCategory.children.filter(
-      (n): n is TreeLeaf => isLeaf(n) && n.allowedKinds.includes(kind),
+    return getAllLeaves(drillCategory.children).filter((l) =>
+      l.allowedKinds.includes(kind),
     );
   }, [drillCategory, kind]);
 

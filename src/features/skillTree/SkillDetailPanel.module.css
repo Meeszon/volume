@@ -128,51 +128,6 @@
   );
 }
 
-.sectionTitle {
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  font-weight: 500;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--ink-3);
-  margin: 0;
-}
-
-.drillList {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  margin-top: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.drill {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  padding: 9px 10px 11px;
-  background: var(--wall-light);
-  border: 1px solid rgba(26, 24, 20, 0.08);
-  border-radius: 6px;
-}
-
-.drillName {
-  font-family: var(--font-display);
-  font-weight: 500;
-  font-size: 13.5px;
-  letter-spacing: -0.005em;
-  color: var(--ink);
-}
-
-.drillDetail {
-  font-family: var(--font-ui);
-  font-size: 11.5px;
-  color: var(--ink-3);
-  line-height: 1.4;
-}
-
 .video {
   height: 130px;
   border-radius: 6px;

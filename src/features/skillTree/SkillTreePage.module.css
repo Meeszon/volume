@@ -393,11 +393,11 @@
 
 /* ───────── Tree open-sequence animations ───────── */
 
-/* Phase 1 — solid stroke draws from center → category glyph (≈0–380ms). */
+/* Phase 1 — solid stroke draws from center → category glyph (≈0–220ms). */
 .catLineDraw {
   stroke-dasharray: var(--line-len);
   stroke-dashoffset: var(--line-len);
-  animation: drawStroke 380ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: drawStroke 220ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 @keyframes drawStroke {
@@ -407,13 +407,13 @@
 }
 
 /* Phase 2 — dashed ring around the selected hex eases in. Delay is applied
-   inline (≈280ms for category, 0ms for leaf selection). */
+   inline (≈180ms for category, 0ms for leaf selection). */
 .selectedRing {
   opacity: 0;
   transform-box: fill-box;
   transform-origin: center;
   transform: scale(0.86);
-  animation: ringFadeIn 280ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: ringFadeIn 200ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 @keyframes ringFadeIn {
@@ -424,14 +424,14 @@
 }
 
 /* Phase 3a — leaf connector lines draw outward from parent simultaneously
-   (≈480–840ms). */
+   (≈260–480ms). */
 .leafLineDraw {
   opacity: 0;
   stroke-dasharray: var(--line-len);
   stroke-dashoffset: var(--line-len);
   animation:
-    drawStroke 360ms cubic-bezier(0.22, 1, 0.36, 1) 480ms forwards,
-    leafLineFade 140ms linear 480ms forwards;
+    drawStroke 220ms cubic-bezier(0.22, 1, 0.36, 1) 260ms forwards,
+    leafLineFade 100ms linear 260ms forwards;
 }
 
 @keyframes leafLineFade {
@@ -441,14 +441,28 @@
 }
 
 /* Phase 3b — leaf hexes bloom out of the parent center simultaneously
-   (≈480–780ms). transform-origin is the parent category position so each
+   (≈260–460ms). transform-origin is the parent category position so each
    leaf appears to grow OUT of the glyph rather than from its own center. */
 .leafBloom {
   opacity: 0;
   transform: scale(0.32);
   transform-box: view-box;
   transform-origin: var(--ox) var(--oy);
-  animation: leafBloomIn 300ms cubic-bezier(0.22, 1, 0.36, 1) 480ms forwards;
+  animation: leafBloomIn 200ms cubic-bezier(0.22, 1, 0.36, 1) 260ms forwards;
+}
+
+/* Tier-2 (subcategory → leaf) variants. The parent subcategory hex is already
+   in place when this fires, so the lines + hexes don't need to wait — they
+   snap out immediately and quickly, giving the subcategory open a noticeably
+   crisper feel than the tier-1 open. */
+.leafLineDraw.tier2 {
+  animation:
+    drawStroke 140ms cubic-bezier(0.22, 1, 0.36, 1) 0ms forwards,
+    leafLineFade 80ms linear 0ms forwards;
+}
+
+.leafBloom.tier2 {
+  animation: leafBloomIn 140ms cubic-bezier(0.22, 1, 0.36, 1) 0ms forwards;
 }
 
 @keyframes leafBloomIn {
@@ -528,11 +542,23 @@
   animation: leafBloomOut 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* Tier-2 close — match the snappier open so subcategory collapse doesn't feel
+   slower than its expand. */
+.leafLineDraw.tier2.closing {
+  animation: leafLineUndraw 160ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.leafBloom.tier2.closing {
+  animation: leafBloomOut 160ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .catLineDraw,
   .catLineDraw.closing,
   .leafLineDraw,
-  .leafLineDraw.closing {
+  .leafLineDraw.closing,
+  .leafLineDraw.tier2,
+  .leafLineDraw.tier2.closing {
     animation: none;
     stroke-dashoffset: 0;
     opacity: 0.55;
@@ -544,7 +570,9 @@
     transform: none;
   }
   .leafBloom,
-  .leafBloom.closing {
+  .leafBloom.closing,
+  .leafBloom.tier2,
+  .leafBloom.tier2.closing {
     animation: none;
     opacity: 1;
     transform: none;

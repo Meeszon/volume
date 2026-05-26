@@ -12,7 +12,7 @@ import type {
 const task: Activity = {
   id: "a1",
   kind: "climb",
-  intentLeafId: "footwork",
+  intentLeafId: "foot-placement",
   block: null,
   durationMinutes: 90,
 };
@@ -47,7 +47,7 @@ function renderCard(
 describe("ActivityCard", () => {
   it("renders the intent in the eyebrow and 'Climbing Session' as the main label for Climb", () => {
     renderCard();
-    expect(screen.getByTestId("eyebrow-chip").textContent).toBe("Footwork");
+    expect(screen.getByTestId("eyebrow-chip").textContent).toBe("Foot Placement");
     expect(screen.getByText("Climbing Session")).toBeTruthy();
   });
 
@@ -75,7 +75,7 @@ describe("ActivityCard", () => {
   it("renders the intent in the eyebrow and the block name as the main label for Train", () => {
     renderCard({
       kind: "train",
-      intentLeafId: "finger-strength",
+      intentLeafId: "max-finger-strength",
       block: {
         name: "Max Hangs",
         exercises: [
@@ -83,7 +83,7 @@ describe("ActivityCard", () => {
         ],
       },
     });
-    expect(screen.getByTestId("eyebrow-chip").textContent).toBe("Finger Strength");
+    expect(screen.getByTestId("eyebrow-chip").textContent).toBe("Max Finger Strength");
     expect(screen.getByText("Max Hangs")).toBeTruthy();
   });
 

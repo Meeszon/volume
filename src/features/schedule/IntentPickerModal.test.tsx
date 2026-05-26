@@ -108,17 +108,18 @@ describe("IntentPickerModal", () => {
 
     it("does NOT show leaves before drilling", () => {
       renderPicker({ kind: "climb" });
-      expect(screen.queryByRole("button", { name: /^footwork$/i })).toBeNull();
+      expect(screen.queryByRole("button", { name: /^foot placement$/i })).toBeNull();
     });
 
-    it("tapping a category drills in — replaces categories with that category's leaves and shows a back arrow", async () => {
+    it("tapping a category drills in — replaces categories with that category's leaves (flattened across subcategories) and shows a back arrow", async () => {
       const { user } = renderPicker({ kind: "climb" });
       await user.click(screen.getByRole("button", { name: /^technique$/i }));
 
-      // Leaves visible
-      expect(screen.getByRole("button", { name: /^footwork$/i })).toBeTruthy();
-      expect(screen.getByRole("button", { name: /^body positioning$/i })).toBeTruthy();
+      // All descendant leaves under Technique are flattened into the row
+      expect(screen.getByRole("button", { name: /^foot placement$/i })).toBeTruthy();
+      expect(screen.getByRole("button", { name: /^hooking$/i })).toBeTruthy();
       expect(screen.getByRole("button", { name: /^dynamic movement$/i })).toBeTruthy();
+      expect(screen.getByRole("button", { name: /^hold application$/i })).toBeTruthy();
 
       // Categories no longer visible (only the drilled-into label remains)
       expect(screen.queryByRole("button", { name: /^mobility$/i })).toBeNull();
@@ -133,29 +134,28 @@ describe("IntentPickerModal", () => {
       await user.click(screen.getByRole("button", { name: /^technique$/i }));
       await user.click(screen.getByRole("button", { name: /back/i }));
       expect(screen.getByRole("button", { name: /^technique$/i })).toBeTruthy();
-      expect(screen.queryByRole("button", { name: /^footwork$/i })).toBeNull();
+      expect(screen.queryByRole("button", { name: /^foot placement$/i })).toBeNull();
     });
 
     it("only shows leaves whose allowedKinds includes the current Kind", async () => {
       const { user } = renderPicker({ kind: "train" });
       await user.click(screen.getByRole("button", { name: /^strength$/i }));
       // Train-allowed strength leaves
-      expect(screen.getByRole("button", { name: /finger strength/i })).toBeTruthy();
-      expect(screen.getByRole("button", { name: /antagonist training/i })).toBeTruthy();
+      expect(screen.getByRole("button", { name: /max finger strength/i })).toBeTruthy();
     });
 
-    it("excludes Train-only leaves when Kind = Climb", async () => {
-      const { user } = renderPicker({ kind: "climb" });
-      await user.click(screen.getByRole("button", { name: /^strength$/i }));
-      // Antagonist Training is train-only — must NOT appear
-      expect(screen.queryByRole("button", { name: /antagonist training/i })).toBeNull();
+    it("excludes Climb-only leaves when Kind = Train", async () => {
+      const { user } = renderPicker({ kind: "train" });
+      await user.click(screen.getByRole("button", { name: /^technique$/i }));
+      // Foot Placement is climb-only — must NOT appear under Train
+      expect(screen.queryByRole("button", { name: /^foot placement$/i })).toBeNull();
     });
 
     it("clicking a leaf invokes onSelect", async () => {
       const { user, onSelect } = renderPicker({ kind: "climb" });
       await user.click(screen.getByRole("button", { name: /^technique$/i }));
-      await user.click(screen.getByRole("button", { name: /^footwork$/i }));
-      expect(onSelect).toHaveBeenCalledWith("footwork");
+      await user.click(screen.getByRole("button", { name: /^foot placement$/i }));
+      expect(onSelect).toHaveBeenCalledWith("foot-placement");
     });
   });
 
@@ -164,12 +164,12 @@ describe("IntentPickerModal", () => {
       const { user } = renderPicker({
         kind: "climb",
         initialGoals: [
-          { leafId: "footwork" },
+          { leafId: "foot-placement" },
           { leafId: "hip-mobility" }, // train-only — must be filtered out
         ],
       });
       await user.click(screen.getByRole("tab", { name: /goals/i }));
-      expect(screen.getByRole("button", { name: /^footwork$/i })).toBeTruthy();
+      expect(screen.getByRole("button", { name: /^foot placement$/i })).toBeTruthy();
       expect(screen.queryByRole("button", { name: /^hip mobility$/i })).toBeNull();
     });
 
@@ -182,11 +182,11 @@ describe("IntentPickerModal", () => {
     it("clicking a goal hex invokes onSelect", async () => {
       const { user, onSelect } = renderPicker({
         kind: "climb",
-        initialGoals: [{ leafId: "footwork" }],
+        initialGoals: [{ leafId: "foot-placement" }],
       });
       await user.click(screen.getByRole("tab", { name: /goals/i }));
-      await user.click(screen.getByRole("button", { name: /^footwork$/i }));
-      expect(onSelect).toHaveBeenCalledWith("footwork");
+      await user.click(screen.getByRole("button", { name: /^foot placement$/i }));
+      expect(onSelect).toHaveBeenCalledWith("foot-placement");
     });
   });
 
@@ -194,13 +194,13 @@ describe("IntentPickerModal", () => {
     it("renders the most-recent intents filtered by Kind, in order", async () => {
       const { user } = renderPicker({
         kind: "climb",
-        recentIds: ["finger-strength", "hip-mobility", "footwork"],
+        recentIds: ["max-finger-strength", "hip-mobility", "foot-placement"],
       });
       await user.click(screen.getByRole("tab", { name: /recents/i }));
       const buttons = screen.getAllByRole("button");
       const labels = buttons.map((b) => b.textContent ?? "");
-      const fsIdx = labels.findIndex((l) => l.includes("Finger Strength"));
-      const fwIdx = labels.findIndex((l) => l.includes("Footwork"));
+      const fsIdx = labels.findIndex((l) => l.includes("Max Finger Strength"));
+      const fwIdx = labels.findIndex((l) => l.includes("Foot Placement"));
       expect(fsIdx).toBeGreaterThan(-1);
       expect(fwIdx).toBeGreaterThan(-1);
       expect(fsIdx).toBeLessThan(fwIdx);
@@ -217,11 +217,11 @@ describe("IntentPickerModal", () => {
     it("clicking a recent hex invokes onSelect", async () => {
       const { user, onSelect } = renderPicker({
         kind: "climb",
-        recentIds: ["footwork"],
+        recentIds: ["foot-placement"],
       });
       await user.click(screen.getByRole("tab", { name: /recents/i }));
-      await user.click(screen.getByRole("button", { name: /^footwork$/i }));
-      expect(onSelect).toHaveBeenCalledWith("footwork");
+      await user.click(screen.getByRole("button", { name: /^foot placement$/i }));
+      expect(onSelect).toHaveBeenCalledWith("foot-placement");
     });
   });
 
@@ -230,15 +230,15 @@ describe("IntentPickerModal", () => {
       const { user } = renderPicker({ kind: "climb" });
       await user.click(screen.getByRole("button", { name: /^technique$/i }));
       // confirm drilled
-      expect(screen.getByRole("button", { name: /^footwork$/i })).toBeTruthy();
+      expect(screen.getByRole("button", { name: /^foot placement$/i })).toBeTruthy();
 
       await user.click(screen.getByRole("tab", { name: /recents/i }));
-      // Footwork is no longer rendered while on Recents
-      expect(screen.queryByRole("button", { name: /^footwork$/i })).toBeNull();
+      // Foot Placement is no longer rendered while on Recents
+      expect(screen.queryByRole("button", { name: /^foot placement$/i })).toBeNull();
 
       await user.click(screen.getByRole("tab", { name: /all/i }));
-      // Drilled-in view restored — Footwork visible again, Mobility not
-      expect(screen.getByRole("button", { name: /^footwork$/i })).toBeTruthy();
+      // Drilled-in view restored — Foot Placement visible again, Mobility not
+      expect(screen.getByRole("button", { name: /^foot placement$/i })).toBeTruthy();
       expect(screen.queryByRole("button", { name: /^mobility$/i })).toBeNull();
     });
   });

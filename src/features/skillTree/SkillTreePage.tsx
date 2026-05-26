@@ -4,7 +4,12 @@ import { SKILL_TREE, CATEGORY_COLORS } from "../../data/skillTree";
 import { isLeaf } from "../../utils/tree";
 import { useGoals } from "../../contexts/useGoals";
 import type { TreeBranch, TreeLeaf, TreeNode } from "../../types";
-import { findLeaf, getLeafCategory } from "../../lib/skillTreeLookup";
+import {
+  findLeaf,
+  getAllLeaves,
+  getLeafAncestors,
+  getLeafCategory,
+} from "../../lib/skillTreeLookup";
 import { SkillDetailPanel } from "./SkillDetailPanel";
 import styles from "./SkillTreePage.module.css";
 
@@ -13,11 +18,20 @@ const CX = 800;
 const CY = 540;
 
 const RING_CAT = 220;
-const RING_LEAF_BASE = 175;
+const RING_LEAF_BASE = 220;
 
 const R_CENTER = 46;
 const R_CAT = 50;
 const R_LEAF = 36;
+
+// Count descendant leaves under any node — used for "X skills" sublabels.
+function countLeavesIn(node: TreeNode): number {
+  if (isLeaf(node)) return 1;
+  return (node as TreeBranch).children.reduce(
+    (a, c) => a + countLeavesIn(c),
+    0,
+  );
+}
 
 const FONT_DISPLAY = "'Bricolage Grotesque', system-ui, sans-serif";
 const FONT_MONO = "'JetBrains Mono', ui-monospace, monospace";
@@ -47,7 +61,7 @@ function CatIcon({ id, size = 28 }: { id: string; size?: number }) {
           <path d="M12.5 14.5 12.5 11.5" />
         </svg>
       );
-    case "flexibility-mobility":
+    case "mobility":
       return (
         <svg {...common}>
           <path d="M4 18c0-8 6-12 12-12" />
@@ -63,14 +77,14 @@ function CatIcon({ id, size = 28 }: { id: string; size?: number }) {
           <circle cx="12" cy="12" r="1.5" fill="white" stroke="none" />
         </svg>
       );
-    case "grips":
+    case "longevity":
       return (
         <svg {...common}>
           <path d="M12 3.5 5 6v6c0 4.5 3 7.5 7 8.5 4-1 7-4 7-8.5V6l-7-2.5Z" />
           <path d="M9 12l2.2 2.2L15 10.4" />
         </svg>
       );
-    case "physical-strength":
+    case "strength":
       return (
         <svg {...common}>
           <rect x="3.5" y="9.5" width="2.5" height="5" rx=".4" />
@@ -97,8 +111,8 @@ function catPos(i: number, total = 5): [number, number] {
 function leafPositions(catIdx: number, count: number, total = 5): Array<[number, number]> {
   const a = (catIdx * (360 / total) - 90) * (Math.PI / 180);
   const [px, py] = catPos(catIdx, total);
-  const orbit = count <= 2 ? 145 : count <= 3 ? 160 : 175;
-  const arcDeg = count <= 1 ? 0 : count === 2 ? 56 : count === 3 ? 104 : 138;
+  const orbit = count <= 2 ? 185 : count <= 3 ? 205 : 220;
+  const arcDeg = count <= 1 ? 0 : count === 2 ? 50 : count === 3 ? 92 : 124;
   const arcRad = (arcDeg * Math.PI) / 180;
   return Array.from({ length: count }, (_, i) => {
     const t = count === 1 ? 0 : (i - (count - 1) / 2) / (count - 1);
@@ -106,6 +120,30 @@ function leafPositions(catIdx: number, count: number, total = 5): Array<[number,
     return [
       Math.round(px + orbit * Math.cos(theta)),
       Math.round(py + orbit * Math.sin(theta)),
+    ] as [number, number];
+  });
+}
+
+// Position tier-2 leaves around a subcategory hex, fanning outward along the
+// direction from the parent category toward the subcategory.
+function subLeafPositions(
+  catIdx: number,
+  subcatPos: [number, number],
+  count: number,
+  total = 5,
+): Array<[number, number]> {
+  const [cx_cat, cy_cat] = catPos(catIdx, total);
+  const [sx, sy] = subcatPos;
+  const baseTheta = Math.atan2(sy - cy_cat, sx - cx_cat);
+  const orbit = count <= 2 ? 150 : count <= 3 ? 165 : 180;
+  const arcDeg = count <= 1 ? 0 : count === 2 ? 44 : count === 3 ? 72 : 98;
+  const arcRad = (arcDeg * Math.PI) / 180;
+  return Array.from({ length: count }, (_, i) => {
+    const t = count === 1 ? 0 : (i - (count - 1) / 2) / (count - 1);
+    const theta = baseTheta + t * arcRad;
+    return [
+      Math.round(sx + orbit * Math.cos(theta)),
+      Math.round(sy + orbit * Math.sin(theta)),
     ] as [number, number];
   });
 }
@@ -241,6 +279,11 @@ interface HexNodeProps {
   // uses this to keep the ring visible across the full close window while
   // letting the inner scale/tint deselect partway through.
   ringActive?: boolean;
+  // For kind="leaf": which point should the radial label pivot away from?
+  // Defaults to (CX, CY). Tier-2 sub-leaves pass their parent subcategory's
+  // position so labels stay outside the leaf rather than colliding back inward.
+  labelPivotX?: number;
+  labelPivotY?: number;
 }
 
 function HexNode({
@@ -260,16 +303,20 @@ function HexNode({
   ringAnimDelay,
   isClosing,
   ringActive,
+  labelPivotX,
+  labelPivotY,
 }: HexNodeProps) {
   const showRing = ringActive ?? selected;
   const dim = inactive ? 0.45 : 1;
   const scale = selected ? 1.05 : 1;
   const transform = `translate(${cx} ${cy}) scale(${scale}) translate(${-cx} ${-cy})`;
   const labelGap = kind === "cat" ? r * 1.25 : r * 1.45;
+  const pivotX = labelPivotX ?? CX;
+  const pivotY = labelPivotY ?? CY;
   const lp =
     kind === "cat"
       ? { x: cx, y: cy + r + 23, anchor: "middle" as const }
-      : radialLabel(cx, cy, CX, CY, labelGap);
+      : radialLabel(cx, cy, pivotX, pivotY, labelGap);
   // Upper-right vertex on flat-top hex: angle -60° (300°).
   const tagX = cx + (r + 6) * Math.cos(-Math.PI / 3);
   const tagY = cy + (r + 6) * Math.sin(-Math.PI / 3);
@@ -380,24 +427,45 @@ function HexNode({
           )}
         </>
       ) : (
-        <text
-          x={lp.x}
-          y={lp.y}
-          textAnchor={lp.anchor}
-          dominantBaseline="central"
-          fontFamily={FONT_DISPLAY}
-          fontSize={12.5}
-          fontWeight={500}
-          letterSpacing="-.005em"
-          fill="#1a1814"
-          stroke="#f5f6f6"
-          strokeWidth={4}
-          strokeLinejoin="round"
-          paintOrder="stroke"
-          style={{ pointerEvents: "none" }}
-        >
-          {label}
-        </text>
+        <>
+          <text
+            x={lp.x}
+            y={lp.y}
+            textAnchor={lp.anchor}
+            dominantBaseline="central"
+            fontFamily={FONT_DISPLAY}
+            fontSize={12.5}
+            fontWeight={500}
+            letterSpacing="-.005em"
+            fill="#1a1814"
+            stroke="#f5f6f6"
+            strokeWidth={4}
+            strokeLinejoin="round"
+            paintOrder="stroke"
+            style={{ pointerEvents: "none" }}
+          >
+            {label}
+          </text>
+          {sublabel && (
+            <text
+              x={lp.x}
+              y={lp.y + 13}
+              textAnchor={lp.anchor}
+              dominantBaseline="central"
+              fontFamily={FONT_MONO}
+              fontSize={9}
+              letterSpacing="0.14em"
+              fill="#8d8f92"
+              stroke="#f5f6f6"
+              strokeWidth={3}
+              strokeLinejoin="round"
+              paintOrder="stroke"
+              style={{ pointerEvents: "none", textTransform: "uppercase" }}
+            >
+              {sublabel}
+            </text>
+          )}
+        </>
       )}
     </g>
   );
@@ -422,6 +490,11 @@ export function SkillTreePage() {
   // line/leaves in parallel with B's open sequence.
   const [activeCatId, setActiveCatId] = useState<string | null>(null);
   const [closingCatId, setClosingCatId] = useState<string | null>(null);
+  // Tier-2 (sub-category) open/closing, mirroring the cat pattern. A
+  // subcategory only ever belongs to the currently-active category; when the
+  // category closes the subcategory closes in lockstep.
+  const [activeSubcatId, setActiveSubcatId] = useState<string | null>(null);
+  const [closingSubcatId, setClosingSubcatId] = useState<string | null>(null);
   // Flips true GLYPH_RELEASE_MS into a close so the cat hex's scale and tint
   // ease back to neutral partway through, while the ring continues fading and
   // the line still has to undraw.
@@ -438,6 +511,7 @@ export function SkillTreePage() {
   const sizeRef = useRef<{ width: number; height: number }>({ width: 0, height: 0 });
   const lastFocusRef = useRef<number | null>(null);
   const closeTimerRef = useRef<number | null>(null);
+  const subcatCloseTimerRef = useRef<number | null>(null);
 
   const activeCat = useMemo(
     () =>
@@ -445,9 +519,17 @@ export function SkillTreePage() {
     [activeCatId],
   );
 
-  // Render groups: 0–2 categories whose lines + leaves should be on-screen.
-  // The active cat (open animation) plus, if currently switching/deselecting,
-  // the cat that's animating away (closing animation).
+  const activeSubcat = useMemo((): TreeBranch | null => {
+    if (!activeCat || !activeSubcatId) return null;
+    const found = activeCat.children.find(
+      (c) => c.id === activeSubcatId && !isLeaf(c),
+    );
+    return (found as TreeBranch | undefined) ?? null;
+  }, [activeCat, activeSubcatId]);
+
+  // Render groups: 0–2 categories whose lines + tier-1 children should be
+  // on-screen. The active cat (open animation) plus, if currently switching or
+  // deselecting, the cat that's animating away (closing animation).
   const renderGroups = useMemo(() => {
     const groups: Array<{ catId: string; isClosing: boolean }> = [];
     if (activeCatId) groups.push({ catId: activeCatId, isClosing: false });
@@ -456,6 +538,44 @@ export function SkillTreePage() {
     }
     return groups;
   }, [activeCatId, closingCatId]);
+
+  // Tier-2 render groups: 0–2 subcategories whose lines + leaves should be on
+  // screen. A closing subcat may belong to either the active cat (user closed
+  // / switched subcat) or a closing cat (whole category collapsed).
+  const subRenderGroups = useMemo(() => {
+    const groups: Array<{
+      catId: string;
+      subcatId: string;
+      isClosing: boolean;
+    }> = [];
+    function findParent(subcatId: string): string | null {
+      for (const top of SKILL_TREE) {
+        if (isLeaf(top)) continue;
+        for (const child of (top as TreeBranch).children) {
+          if (!isLeaf(child) && child.id === subcatId) return top.id;
+        }
+      }
+      return null;
+    }
+    if (activeCatId && activeSubcatId) {
+      groups.push({
+        catId: activeCatId,
+        subcatId: activeSubcatId,
+        isClosing: false,
+      });
+    }
+    if (closingSubcatId && closingSubcatId !== activeSubcatId) {
+      const parent = findParent(closingSubcatId);
+      if (parent) {
+        groups.push({
+          catId: parent,
+          subcatId: closingSubcatId,
+          isClosing: true,
+        });
+      }
+    }
+    return groups;
+  }, [activeCatId, activeSubcatId, closingSubcatId]);
 
   const selectedLeaf = useMemo((): TreeLeaf | null => {
     if (!selectedLeafId) return null;
@@ -474,11 +594,7 @@ export function SkillTreePage() {
       : "#888";
 
   const skillCount = useMemo(
-    () =>
-      SKILL_TREE.reduce(
-        (a, c) => a + (isLeaf(c) ? 1 : (c as TreeBranch).children.length),
-        0,
-      ),
+    () => getAllLeaves(SKILL_TREE).length,
     [],
   );
 
@@ -535,7 +651,7 @@ export function SkillTreePage() {
     const [px, py] = catPos(catIdx);
     const fx = CX + (px - CX) * 0.6;
     const fy = CY + (py - CY) * 0.6;
-    const k = Math.max(0.2, Math.min(width / 780, height / 660, 1.3));
+    const k = Math.max(0.2, Math.min(width / 900, height / 780, 1.3));
     return { k, x: width / 2 - fx * k, y: height / 2 - fy * k };
   }, []);
 
@@ -585,12 +701,16 @@ export function SkillTreePage() {
     applyTarget(activeCatId == null ? null : idx, true);
   }, [activeCatId, applyTarget]);
 
-  // ── Cleanup pending close timer on unmount ─────────────────────────────────
+  // ── Cleanup pending close timers on unmount ────────────────────────────────
   useEffect(() => {
     return () => {
       if (closeTimerRef.current !== null) {
         clearTimeout(closeTimerRef.current);
         closeTimerRef.current = null;
+      }
+      if (subcatCloseTimerRef.current !== null) {
+        clearTimeout(subcatCloseTimerRef.current);
+        subcatCloseTimerRef.current = null;
       }
     };
   }, []);
@@ -669,6 +789,27 @@ export function SkillTreePage() {
     }, CLOSE_SEQ_MS);
   }, []);
 
+  const armSubcatCloseTimer = useCallback(() => {
+    if (subcatCloseTimerRef.current !== null) {
+      clearTimeout(subcatCloseTimerRef.current);
+    }
+    subcatCloseTimerRef.current = window.setTimeout(() => {
+      setClosingSubcatId(null);
+      subcatCloseTimerRef.current = null;
+    }, CLOSE_SEQ_MS);
+  }, []);
+
+  // Tear down any currently-open subcategory and route it through the closing
+  // slot. Used both when the user collapses a subcat directly and when the
+  // parent cat is closing/switching — in the latter case the tier-2 leaves
+  // need to retract alongside the tier-1 children.
+  const handoffActiveSubcat = useCallback(() => {
+    if (activeSubcatId === null) return;
+    setClosingSubcatId(activeSubcatId);
+    setActiveSubcatId(null);
+    armSubcatCloseTimer();
+  }, [activeSubcatId, armSubcatCloseTimer]);
+
   const onCatClick = (id: string | null) => {
     if (hasDragged.current) return;
     setSelectedLeafId(null);
@@ -679,6 +820,7 @@ export function SkillTreePage() {
       if (activeCatId === null) return;
       setClosingCatId(activeCatId);
       setActiveCatId(null);
+      handoffActiveSubcat();
       applyTarget(null, true);
       armCloseTimer();
       return;
@@ -688,6 +830,7 @@ export function SkillTreePage() {
     // the closing slot so it undraws in parallel with the new cat opening.
     if (activeCatId !== null && activeCatId !== id) {
       setClosingCatId(activeCatId);
+      handoffActiveSubcat();
       armCloseTimer();
     } else {
       // Nothing was open — clear any stale closingCatId (shouldn't happen
@@ -700,6 +843,29 @@ export function SkillTreePage() {
     }
     setActiveCatId(id);
   };
+
+  const onSubcatClick = (id: string) => {
+    if (hasDragged.current) return;
+    setSelectedLeafId(null);
+
+    if (activeSubcatId === id) {
+      handoffActiveSubcat();
+      return;
+    }
+
+    if (activeSubcatId !== null) {
+      setClosingSubcatId(activeSubcatId);
+      armSubcatCloseTimer();
+    } else {
+      if (subcatCloseTimerRef.current !== null) {
+        clearTimeout(subcatCloseTimerRef.current);
+        subcatCloseTimerRef.current = null;
+      }
+      setClosingSubcatId(null);
+    }
+    setActiveSubcatId(id);
+  };
+
   const onLeafClick = (id: string) => {
     if (hasDragged.current) return;
     setSelectedLeafId((prev) => (prev === id ? null : id));
@@ -778,7 +944,9 @@ export function SkillTreePage() {
                 className={`${styles.gChip} ${isSel ? styles.gChipSelected : ""}`}
                 style={{ "--cat": color } as React.CSSProperties}
                 onClick={() => {
+                  const chain = getLeafAncestors(SKILL_TREE, g.leafId);
                   setActiveCatId(cat.id);
+                  setActiveSubcatId(chain.length > 1 ? chain[1].id : null);
                   setSelectedLeafId(g.leafId);
                 }}
               >
@@ -974,13 +1142,14 @@ export function SkillTreePage() {
                   activeCatId !== null &&
                   !isActive &&
                   (!isClosingThis || glyphReleased);
-                const goalsInCat = branch.children.filter(
-                  (l) => isLeaf(l) && isGoal((l as TreeLeaf).id),
+                const leafCount = countLeavesIn(branch);
+                const goalsInCat = getAllLeaves(branch.children).filter((l) =>
+                  isGoal(l.id),
                 ).length;
                 const sub =
                   goalsInCat > 0
-                    ? `${branch.children.length} skills · ${goalsInCat} goal${goalsInCat === 1 ? "" : "s"}`
-                    : `${branch.children.length} skills`;
+                    ? `${leafCount} skills · ${goalsInCat} goal${goalsInCat === 1 ? "" : "s"}`
+                    : `${leafCount} skills`;
                 // The ring stays mounted for the whole close (it has its own
                 // fade-out animation). The hex glyph itself releases earlier —
                 // at GLYPH_RELEASE_MS — so its scale + tint ease back to
@@ -1003,17 +1172,17 @@ export function SkillTreePage() {
                     ringActive={isActive || isClosingThis}
                     inactive={isInactive}
                     onClick={() => onCatClick(cat.id)}
-                    ringAnimDelay={280}
+                    ringAnimDelay={180}
                     isClosing={isClosingThis}
                   />
                 );
               })}
 
-              {/* Leaf hexes. Each leaf is wrapped in a group whose CSS
-                  transform-origin is the parent category position, so the
-                  bloom appears to grow OUT of (or retract back into) the
-                  glyph. Closing-cat leaves are non-interactive while they
-                  animate away. */}
+              {/* Tier-1 hexes (sub-categories OR direct leaves). Each is
+                  wrapped in a group whose CSS transform-origin is the parent
+                  category position, so the bloom appears to grow OUT of (or
+                  retract back into) the category glyph. Closing-cat children
+                  are non-interactive while they animate away. */}
               {renderGroups.map((g) => {
                 const branch = SKILL_TREE.find(
                   (c) => c.id === g.catId && !isLeaf(c),
@@ -1022,13 +1191,48 @@ export function SkillTreePage() {
                 const idx = SKILL_TREE.findIndex((c) => c.id === g.catId);
                 const [px, py] = catPos(idx);
                 const positions = leafPositions(idx, branch.children.length);
-                return branch.children.map((leaf: TreeNode, i: number) => {
-                  if (!isLeaf(leaf)) return null;
-                  const tl = leaf as TreeLeaf;
+                const color = CATEGORY_COLORS[g.catId] ?? "#888";
+                return branch.children.map((child: TreeNode, i: number) => {
                   const [lx, ly] = positions[i];
+                  const isSubBranch = !isLeaf(child);
+                  if (isSubBranch) {
+                    const sb = child as TreeBranch;
+                    const isSubActive = !g.isClosing && sb.id === activeSubcatId;
+                    const isSubClosing = sb.id === closingSubcatId;
+                    const leafCount = countLeavesIn(sb);
+                    return (
+                      <g
+                        key={`tier1-${g.catId}-${sb.id}`}
+                        className={`${styles.leafBloom} ${g.isClosing ? styles.closing : ""}`}
+                        style={
+                          {
+                            "--ox": `${px}px`,
+                            "--oy": `${py}px`,
+                            pointerEvents: g.isClosing ? "none" : undefined,
+                          } as React.CSSProperties
+                        }
+                      >
+                        <HexNode
+                          kind="leaf"
+                          cx={lx}
+                          cy={ly}
+                          r={R_LEAF}
+                          color={color}
+                          initials={leafInitials(sb.label)}
+                          label={sb.label}
+                          sublabel={`${leafCount} skill${leafCount === 1 ? "" : "s"}`}
+                          selected={isSubActive}
+                          ringActive={isSubActive || isSubClosing}
+                          isClosing={isSubClosing}
+                          onClick={g.isClosing ? undefined : () => onSubcatClick(sb.id)}
+                        />
+                      </g>
+                    );
+                  }
+                  const tl = child as TreeLeaf;
                   return (
                     <g
-                      key={`leaf-${g.catId}-${tl.id}`}
+                      key={`tier1-${g.catId}-${tl.id}`}
                       className={`${styles.leafBloom} ${g.isClosing ? styles.closing : ""}`}
                       style={
                         {
@@ -1043,12 +1247,120 @@ export function SkillTreePage() {
                         cx={lx}
                         cy={ly}
                         r={R_LEAF}
-                        color={CATEGORY_COLORS[g.catId] ?? "#888"}
+                        color={color}
                         initials={leafInitials(tl.label)}
                         label={tl.label}
                         selected={!g.isClosing && tl.id === selectedLeafId}
                         isGoal={isGoal(tl.id)}
                         onClick={g.isClosing ? undefined : () => onLeafClick(tl.id)}
+                      />
+                    </g>
+                  );
+                });
+              })}
+
+              {/* Tier-2 connector lines: from an open (or closing) subcategory
+                  out to its leaf children. */}
+              {subRenderGroups.map((sg) => {
+                const catBranch = SKILL_TREE.find(
+                  (c) => c.id === sg.catId && !isLeaf(c),
+                ) as TreeBranch | undefined;
+                if (!catBranch) return null;
+                const idx = SKILL_TREE.findIndex((c) => c.id === sg.catId);
+                const tier1Positions = leafPositions(idx, catBranch.children.length);
+                const subIdx = catBranch.children.findIndex(
+                  (c) => c.id === sg.subcatId,
+                );
+                if (subIdx < 0) return null;
+                const subBranch = catBranch.children[subIdx] as TreeBranch;
+                const [sx, sy] = tier1Positions[subIdx];
+                const tier2Positions = subLeafPositions(
+                  idx,
+                  [sx, sy],
+                  subBranch.children.length,
+                );
+                const color = CATEGORY_COLORS[sg.catId] ?? "#888";
+                return subBranch.children.map((leaf, i) => {
+                  if (!isLeaf(leaf)) return null;
+                  const [lx, ly] = tier2Positions[i];
+                  const theta = Math.atan2(ly - sy, lx - sx);
+                  const ux = Math.cos(theta);
+                  const uy = Math.sin(theta);
+                  const startTrim = hexEdgeDistance(R_LEAF, theta);
+                  const endTrim = hexEdgeDistance(R_LEAF, theta);
+                  const x1 = sx + ux * startTrim;
+                  const y1 = sy + uy * startTrim;
+                  const x2 = lx - ux * endTrim;
+                  const y2 = ly - uy * endTrim;
+                  const len = Math.hypot(x2 - x1, y2 - y1);
+                  return (
+                    <line
+                      key={`sl-${sg.subcatId}-${i}`}
+                      className={`${styles.leafLineDraw} ${styles.tier2} ${sg.isClosing ? styles.closing : ""}`}
+                      x1={x1}
+                      y1={y1}
+                      x2={x2}
+                      y2={y2}
+                      stroke={color}
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      style={{ "--line-len": len } as React.CSSProperties}
+                    />
+                  );
+                });
+              })}
+
+              {/* Tier-2 hexes — actual leaf skills under an open subcategory.
+                  Bloom origin is the subcategory position so they appear to
+                  grow out of that hex. */}
+              {subRenderGroups.map((sg) => {
+                const catBranch = SKILL_TREE.find(
+                  (c) => c.id === sg.catId && !isLeaf(c),
+                ) as TreeBranch | undefined;
+                if (!catBranch) return null;
+                const idx = SKILL_TREE.findIndex((c) => c.id === sg.catId);
+                const tier1Positions = leafPositions(idx, catBranch.children.length);
+                const subIdx = catBranch.children.findIndex(
+                  (c) => c.id === sg.subcatId,
+                );
+                if (subIdx < 0) return null;
+                const subBranch = catBranch.children[subIdx] as TreeBranch;
+                const [sx, sy] = tier1Positions[subIdx];
+                const tier2Positions = subLeafPositions(
+                  idx,
+                  [sx, sy],
+                  subBranch.children.length,
+                );
+                const color = CATEGORY_COLORS[sg.catId] ?? "#888";
+                return subBranch.children.map((leaf, i) => {
+                  if (!isLeaf(leaf)) return null;
+                  const tl = leaf as TreeLeaf;
+                  const [lx, ly] = tier2Positions[i];
+                  return (
+                    <g
+                      key={`tier2-${sg.subcatId}-${tl.id}`}
+                      className={`${styles.leafBloom} ${styles.tier2} ${sg.isClosing ? styles.closing : ""}`}
+                      style={
+                        {
+                          "--ox": `${sx}px`,
+                          "--oy": `${sy}px`,
+                          pointerEvents: sg.isClosing ? "none" : undefined,
+                        } as React.CSSProperties
+                      }
+                    >
+                      <HexNode
+                        kind="leaf"
+                        cx={lx}
+                        cy={ly}
+                        r={R_LEAF}
+                        color={color}
+                        initials={leafInitials(tl.label)}
+                        label={tl.label}
+                        selected={!sg.isClosing && tl.id === selectedLeafId}
+                        isGoal={isGoal(tl.id)}
+                        onClick={sg.isClosing ? undefined : () => onLeafClick(tl.id)}
+                        labelPivotX={sx}
+                        labelPivotY={sy}
                       />
                     </g>
                   );
@@ -1068,8 +1380,21 @@ export function SkillTreePage() {
               {activeCat && (
                 <>
                   <span className={styles.crumbSep}>/</span>
-                  <span className={`${styles.crumb} ${styles.crumbActive}`}>
+                  <button
+                    className={`${styles.crumb} ${activeSubcat ? "" : styles.crumbActive}`}
+                    onClick={() => {
+                      if (activeSubcatId !== null) handoffActiveSubcat();
+                    }}
+                  >
                     {activeCat.label}
+                  </button>
+                </>
+              )}
+              {activeSubcat && (
+                <>
+                  <span className={styles.crumbSep}>/</span>
+                  <span className={`${styles.crumb} ${styles.crumbActive}`}>
+                    {activeSubcat.label}
                   </span>
                 </>
               )}

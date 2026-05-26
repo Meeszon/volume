@@ -76,7 +76,7 @@ describe("SchedulePage", () => {
         {
           id: "a1",
           kind: "climb",
-          intentLeafId: "footwork",
+          intentLeafId: "foot-placement",
           block: null,
           durationMinutes: 90,
         },
@@ -169,14 +169,14 @@ describe("SchedulePage", () => {
 
       await user.click(screen.getByRole("button", { name: /^climb$/i }));
       await user.click(screen.getByRole("button", { name: /^technique$/i }));
-      await user.click(screen.getByRole("button", { name: /^footwork$/i }));
+      await user.click(screen.getByRole("button", { name: /^foot placement$/i }));
       await user.click(screen.getByTestId("duration-option-90"));
 
       expect(mockAddActivity).toHaveBeenCalledWith(
         expect.any(String),
         {
           kind: "climb",
-          intentLeafId: "footwork",
+          intentLeafId: "foot-placement",
           block: null,
           durationMinutes: 90,
         },

@@ -61,18 +61,6 @@ export function SkillDetailPanel({ leaf, categoryColor, onClose }: SkillDetailPa
             <span className={styles.videoSub}>YouTube embed · coming soon</span>
           </div>
 
-          <div>
-            <h3 className={styles.sectionTitle}>Training Drills</h3>
-            <ul className={styles.drillList}>
-              {leaf.exercises.map((ex) => (
-                <li key={ex.name} className={styles.drill}>
-                  <span className={styles.drillName}>{ex.name}</span>
-                  <span className={styles.drillDetail}>{ex.detail}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
           <div className={styles.footer}>
             <span className={styles.footerMeta}>
               {goalActive ? "Tracked weekly" : `Up to ${MAX_GOALS} goals`}

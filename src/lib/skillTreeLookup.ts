@@ -42,6 +42,26 @@ export function getLeafCategory(
   return null;
 }
 
+// Walks the tree and returns the chain of TreeBranch ancestors of a leaf,
+// closest-first. Empty array if the leaf isn't found.
+export function getLeafAncestors(
+  tree: TreeNode[],
+  leafId: string,
+): TreeBranch[] {
+  function walk(nodes: TreeNode[], chain: TreeBranch[]): TreeBranch[] | null {
+    for (const n of nodes) {
+      if (isLeaf(n)) {
+        if (n.id === leafId) return chain;
+      } else {
+        const next = walk(n.children, [...chain, n]);
+        if (next) return next;
+      }
+    }
+    return null;
+  }
+  return walk(tree, []) ?? [];
+}
+
 function containsLeaf(branch: TreeBranch, leafId: string): boolean {
   for (const child of branch.children) {
     if (isLeaf(child)) {

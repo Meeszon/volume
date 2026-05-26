@@ -58,35 +58,35 @@ describe("LoadSummaryBar", () => {
   });
 
   it("renders one row per goal, marked as covered when sessions exist", () => {
-    const goals = [{ leafId: "footwork" }, { leafId: "finger-strength" }];
+    const goals = [{ leafId: "foot-placement" }, { leafId: "max-finger-strength" }];
     const activities = [
-      makeActivity({ kind: "climb", intent_leaf_id: "footwork" }),
-      makeActivity({ kind: "climb", intent_leaf_id: "footwork" }),
-      makeActivity({ kind: "train", intent_leaf_id: "finger-strength" }),
+      makeActivity({ kind: "climb", intent_leaf_id: "foot-placement" }),
+      makeActivity({ kind: "climb", intent_leaf_id: "foot-placement" }),
+      makeActivity({ kind: "train", intent_leaf_id: "max-finger-strength" }),
     ];
     renderBar(activities, goals);
 
-    expect(screen.getByText("Footwork")).toBeTruthy();
-    expect(screen.getByText("Finger Strength")).toBeTruthy();
+    expect(screen.getByText("Foot Placement")).toBeTruthy();
+    expect(screen.getByText("Max Finger Strength")).toBeTruthy();
     expect(
-      screen.getByTestId("goal-row-footwork").getAttribute("data-covered"),
+      screen.getByTestId("goal-row-foot-placement").getAttribute("data-covered"),
     ).toBe("true");
     expect(
       screen
-        .getByTestId("goal-row-finger-strength")
+        .getByTestId("goal-row-max-finger-strength")
         .getAttribute("data-covered"),
     ).toBe("true");
   });
 
   it("renders zero-count goal rows distinctly from covered ones", () => {
-    const goals = [{ leafId: "footwork" }, { leafId: "hip-mobility" }];
+    const goals = [{ leafId: "foot-placement" }, { leafId: "hip-mobility" }];
     const activities = [
-      makeActivity({ kind: "climb", intent_leaf_id: "footwork" }),
+      makeActivity({ kind: "climb", intent_leaf_id: "foot-placement" }),
     ];
     renderBar(activities, goals);
 
     expect(
-      screen.getByTestId("goal-row-footwork").getAttribute("data-covered"),
+      screen.getByTestId("goal-row-foot-placement").getAttribute("data-covered"),
     ).toBe("true");
     expect(
       screen.getByTestId("goal-row-hip-mobility").getAttribute("data-covered"),
@@ -106,34 +106,34 @@ describe("LoadSummaryBar", () => {
   });
 
   it("excludes Just-Climbing activities from coverage", () => {
-    const goals = [{ leafId: "footwork" }];
+    const goals = [{ leafId: "foot-placement" }];
     const activities = [
       makeActivity({ kind: "climb", intent_leaf_id: JUST_CLIMBING_LEAF_ID }),
     ];
     renderBar(activities, goals);
 
     expect(
-      screen.getByTestId("goal-row-footwork").getAttribute("data-covered"),
+      screen.getByTestId("goal-row-foot-placement").getAttribute("data-covered"),
     ).toBe("false");
   });
 
   it("ignores activities outside the supplied week window", () => {
-    const goals = [{ leafId: "footwork" }];
+    const goals = [{ leafId: "foot-placement" }];
     const activities = [
       makeActivity({
         scheduled_date: "2026-05-10",
-        intent_leaf_id: "footwork",
+        intent_leaf_id: "foot-placement",
       }),
     ];
     renderBar(activities, goals);
 
     expect(
-      screen.getByTestId("goal-row-footwork").getAttribute("data-covered"),
+      screen.getByTestId("goal-row-foot-placement").getAttribute("data-covered"),
     ).toBe("false");
   });
 
   it("updates coverage state when activities prop changes", () => {
-    const goals = [{ leafId: "footwork" }];
+    const goals = [{ leafId: "foot-placement" }];
     localStorage.setItem("volume:goals", JSON.stringify(goals));
 
     const { rerender } = render(
@@ -148,7 +148,7 @@ describe("LoadSummaryBar", () => {
       </MemoryRouter>,
     );
     expect(
-      screen.getByTestId("goal-row-footwork").getAttribute("data-covered"),
+      screen.getByTestId("goal-row-foot-placement").getAttribute("data-covered"),
     ).toBe("false");
 
     rerender(
@@ -156,7 +156,7 @@ describe("LoadSummaryBar", () => {
         <GoalsProvider>
           <LoadSummaryBar
             activities={[
-              makeActivity({ kind: "climb", intent_leaf_id: "footwork" }),
+              makeActivity({ kind: "climb", intent_leaf_id: "foot-placement" }),
             ]}
             weekStart={WEEK_START}
             weekEnd={WEEK_END}
@@ -165,7 +165,7 @@ describe("LoadSummaryBar", () => {
       </MemoryRouter>,
     );
     expect(
-      screen.getByTestId("goal-row-footwork").getAttribute("data-covered"),
+      screen.getByTestId("goal-row-foot-placement").getAttribute("data-covered"),
     ).toBe("true");
   });
 });

@@ -10,7 +10,6 @@ const FOOTWORK_LEAF: TreeLeaf = {
   label: "Footwork",
   description: "Develop precise foot placement.",
   allowedKinds: ["climb"],
-  exercises: [{ name: "Silent Feet", detail: "Climb without sound" }],
 };
 
 function renderPanel(opts: { leaf?: TreeLeaf; initialGoals?: Goal[] } = {}) {
@@ -57,11 +56,11 @@ describe("SkillDetailPanel goal lifecycle", () => {
   it("disables the Set button when the user already has 5 goals", () => {
     renderPanel({
       initialGoals: [
-        { leafId: "body-positioning" },
+        { leafId: "balance-weight-shifting" },
         { leafId: "dynamic-movement" },
         { leafId: "hip-mobility" },
         { leafId: "shoulder-mobility" },
-        { leafId: "finger-strength" },
+        { leafId: "max-finger-strength" },
       ],
     });
     const btn = screen.getByRole("button", { name: /goals full/i }) as HTMLButtonElement;
@@ -72,7 +71,7 @@ describe("SkillDetailPanel goal lifecycle", () => {
     const { user } = renderPanel({
       initialGoals: [
         { leafId: "footwork" },
-        { leafId: "body-positioning" },
+        { leafId: "balance-weight-shifting" },
         { leafId: "dynamic-movement" },
         { leafId: "hip-mobility" },
         { leafId: "shoulder-mobility" },

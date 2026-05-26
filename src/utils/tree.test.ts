@@ -5,7 +5,6 @@ import type { TreeNode, TreeLeaf, TreeBranch } from "../types";
 const leaf = (id: string, label: string): TreeLeaf => ({
   id,
   label,
-  exercises: [],
   allowedKinds: ["climb"],
 });
 
@@ -31,7 +30,7 @@ const MOCK_TREE: TreeNode[] = [
 
 describe("isLeaf", () => {
   it("returns true for a leaf node", () => {
-    expect(isLeaf({ id: "x", label: "X", exercises: [], allowedKinds: ["climb"] })).toBe(true);
+    expect(isLeaf({ id: "x", label: "X", allowedKinds: ["climb"] })).toBe(true);
   });
   it("returns false for a branch node", () => {
     expect(isLeaf({ id: "x", label: "X", children: [] })).toBe(false);
@@ -146,11 +145,11 @@ describe("getAutoExpandIds", () => {
 
 describe("TreeLeaf description field", () => {
   it("accepts optional description", () => {
-    const node: TreeLeaf = { id: "x", label: "X", description: "Test desc", exercises: [], allowedKinds: ["climb"] };
+    const node: TreeLeaf = { id: "x", label: "X", description: "Test desc", allowedKinds: ["climb"] };
     expect(node.description).toBe("Test desc");
   });
   it("description is optional", () => {
-    const node: TreeLeaf = { id: "y", label: "Y", exercises: [], allowedKinds: ["climb"] };
+    const node: TreeLeaf = { id: "y", label: "Y", allowedKinds: ["climb"] };
     expect(node.description).toBeUndefined();
   });
 });

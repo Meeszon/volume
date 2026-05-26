@@ -173,7 +173,7 @@ export function AddActivityModal({
           kind="train"
           title="Add Train · Block"
           subTitle={trainLeaf.label}
-          blocks={trainLeaf.blocks ?? []}
+          blocks={[]}
           onSelect={setPickedBlock}
           onBack={() => setTrainLeaf(null)}
           backLabel="Back to intent"
