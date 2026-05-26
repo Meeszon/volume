@@ -1,72 +1,116 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import {
-  SportShoe, Dumbbell, Wrench, Puzzle, Spline,
-  Eye, Target, Heart, User, Zap,
-  RotateCcw, RotateCw, Hand, RefreshCw, GripHorizontal,
-  type LucideIcon,
-} from "lucide-react";
+import { User } from "lucide-react";
 import { SKILL_TREE, CATEGORY_COLORS } from "../../data/skillTree";
 import { isLeaf } from "../../utils/tree";
 import { useGoals } from "../../contexts/useGoals";
 import type { TreeBranch, TreeLeaf, TreeNode } from "../../types";
-import { GoalsDashboard } from "./GoalsDashboard";
+import { findLeaf, getLeafCategory } from "../../lib/skillTreeLookup";
 import { SkillDetailPanel } from "./SkillDetailPanel";
 import styles from "./SkillTreePage.module.css";
 
 // ── Layout constants ──────────────────────────────────────────────────────────
-const W = 1400;
-const H = 1100;
-const PENT_CX = 700;
-const PENT_CY = 550;
-const PENT_R = 200;
-const CAT_R = 46;
-const CAT_GLOW_R = 58;
-const CAT_ICON = 26;
-const CENTER_R = 24;
-const L1_R = 32;
-const L1_GLOW_R = 44;
-const L1_ICON = 18;
-const L1_FORWARD = 165;
-const L1_LATERAL = 100;
-const FONT = "'Bricolage Grotesque', system-ui, sans-serif";
+const CX = 800;
+const CY = 540;
+
+const RING_CAT = 220;
+const RING_LEAF_BASE = 175;
+
+const R_CENTER = 46;
+const R_CAT = 50;
+const R_LEAF = 36;
+
+const FONT_DISPLAY = "'Bricolage Grotesque', system-ui, sans-serif";
+const FONT_MONO = "'JetBrains Mono', ui-monospace, monospace";
+
+const MAX_GOALS = 5;
 
 type View = { x: number; y: number; k: number };
 
-// ── Icon map ──────────────────────────────────────────────────────────────────
-const ICON_MAP: Record<string, LucideIcon> = {
-  "technique": SportShoe,
-  "flexibility-mobility": Spline,
-  "mental": Puzzle,
-  "grips": Wrench,
-  "physical-strength": Dumbbell,
-  "footwork": SportShoe,
-  "body-positioning": User,
-  "dynamic-movement": Zap,
-  "hip-mobility": RotateCcw,
-  "ankle-calf-flexibility": RotateCw,
-  "shoulder-mobility": RotateCcw,
-  "route-reading": Eye,
-  "commitment": Target,
-  "fear-management": Heart,
-  "slopers": Hand,
-  "crimp-styles": GripHorizontal,
-  "pinches": Hand,
-  "core-tension": Zap,
-  "finger-strength": GripHorizontal,
-  "power-endurance": RefreshCw,
-  "antagonist-training": Dumbbell,
-};
+// ── Category icon glyphs ──────────────────────────────────────────────────────
+function CatIcon({ id, size = 28 }: { id: string; size?: number }) {
+  const common = {
+    width: size,
+    height: size,
+    viewBox: "0 0 24 24",
+    fill: "none" as const,
+    stroke: "white",
+    strokeWidth: 1.8,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+  };
+  switch (id) {
+    case "technique":
+      return (
+        <svg {...common}>
+          <path d="M5 14.5c0-3.5 4-7.5 9-7.5 3.5 0 5 1.5 5 3.5 0 .8-.4 1.4-1 1.7l-2.4 1.1c-.7.3-1.1.9-1.1 1.7v.5c0 1.4-1.2 2.5-2.5 2.5H7.5C6.1 18 5 16.9 5 15.5Z" />
+          <path d="M9 14.5 9 12" />
+          <path d="M12.5 14.5 12.5 11.5" />
+        </svg>
+      );
+    case "flexibility-mobility":
+      return (
+        <svg {...common}>
+          <path d="M4 18c0-8 6-12 12-12" />
+          <path d="M13 4l3 2-2 3" />
+          <circle cx="4" cy="18" r="1.3" fill="white" />
+        </svg>
+      );
+    case "mental":
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="8" />
+          <circle cx="12" cy="12" r="4.5" />
+          <circle cx="12" cy="12" r="1.5" fill="white" stroke="none" />
+        </svg>
+      );
+    case "grips":
+      return (
+        <svg {...common}>
+          <path d="M12 3.5 5 6v6c0 4.5 3 7.5 7 8.5 4-1 7-4 7-8.5V6l-7-2.5Z" />
+          <path d="M9 12l2.2 2.2L15 10.4" />
+        </svg>
+      );
+    case "physical-strength":
+      return (
+        <svg {...common}>
+          <rect x="3.5" y="9.5" width="2.5" height="5" rx=".4" />
+          <rect x="18" y="9.5" width="2.5" height="5" rx=".4" />
+          <rect x="6.5" y="7.5" width="3" height="9" rx=".6" />
+          <rect x="14.5" y="7.5" width="3" height="9" rx=".6" />
+          <path d="M9.5 12h5" />
+        </svg>
+      );
+    default:
+      return null;
+  }
+}
 
 // ── Geometry helpers ──────────────────────────────────────────────────────────
-function catPos(i: number): [number, number] {
-  const a = (i * 72 - 90) * (Math.PI / 180);
+function catPos(i: number, total = 5): [number, number] {
+  const a = (i * (360 / total) - 90) * (Math.PI / 180);
   return [
-    Math.round(PENT_CX + PENT_R * Math.cos(a)),
-    Math.round(PENT_CY + PENT_R * Math.sin(a)),
+    Math.round(CX + RING_CAT * Math.cos(a)),
+    Math.round(CY + RING_CAT * Math.sin(a)),
   ];
 }
 
+function leafPositions(catIdx: number, count: number, total = 5): Array<[number, number]> {
+  const a = (catIdx * (360 / total) - 90) * (Math.PI / 180);
+  const [px, py] = catPos(catIdx, total);
+  const orbit = count <= 2 ? 145 : count <= 3 ? 160 : 175;
+  const arcDeg = count <= 1 ? 0 : count === 2 ? 56 : count === 3 ? 104 : 138;
+  const arcRad = (arcDeg * Math.PI) / 180;
+  return Array.from({ length: count }, (_, i) => {
+    const t = count === 1 ? 0 : (i - (count - 1) / 2) / (count - 1);
+    const theta = a + t * arcRad;
+    return [
+      Math.round(px + orbit * Math.cos(theta)),
+      Math.round(py + orbit * Math.sin(theta)),
+    ] as [number, number];
+  });
+}
+
+// Flat-top hex — keep current rotation (vertices at i*60°, not pointy-top).
 function hexPts(cx: number, cy: number, r: number): string {
   return Array.from({ length: 6 }, (_, i) => {
     const a = i * 60 * (Math.PI / 180);
@@ -74,611 +118,760 @@ function hexPts(cx: number, cy: number, r: number): string {
   }).join(" ");
 }
 
-function calcL1Positions(catIdx: number, count: number): Array<[number, number]> {
-  const θ = (catIdx * 72 - 90) * (Math.PI / 180);
-  const perpθ = θ + Math.PI / 2;
-  const [cx, cy] = catPos(catIdx);
-  return Array.from({ length: count }, (_, i) => {
-    const lateral = (i - (count - 1) / 2) * L1_LATERAL;
-    return [
-      cx + L1_FORWARD * Math.cos(θ) + lateral * Math.cos(perpθ),
-      cy + L1_FORWARD * Math.sin(θ) + lateral * Math.sin(perpθ),
-    ] as [number, number];
-  });
+function radialLabel(cx: number, cy: number, refX: number, refY: number, gap: number) {
+  const theta = Math.atan2(cy - refY, cx - refX);
+  return {
+    x: cx + gap * Math.cos(theta),
+    y: cy + gap * Math.sin(theta),
+    anchor:
+      Math.abs(Math.cos(theta)) > 0.5
+        ? Math.cos(theta) > 0
+          ? ("start" as const)
+          : ("end" as const)
+        : ("middle" as const),
+  };
 }
 
-function l1LabelProps(cx: number, cy: number, lineIdx: number, lineCount: number) {
-  const θ = Math.atan2(cy - PENT_CY, cx - PENT_CX) * (180 / Math.PI);
-  const gap = L1_GLOW_R + 7;
-  if (θ < -45 && θ > -135) {
-    return { x: cx, y: cy - gap - (lineCount - 1 - lineIdx) * 12, anchor: "middle" as const };
-  } else if (θ > 45 && θ < 135) {
-    return { x: cx, y: cy + gap + lineIdx * 12, anchor: "middle" as const };
-  } else if (cx >= PENT_CX) {
-    return { x: cx + gap, y: cy + (lineIdx - (lineCount - 1) / 2) * 12, anchor: "start" as const };
-  } else {
-    return { x: cx - gap, y: cy + (lineIdx - (lineCount - 1) / 2) * 12, anchor: "end" as const };
-  }
+function leafInitials(label: string): string {
+  return label
+    .split(/\s+/)
+    .filter((w) => w !== "&")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 }
 
-function labelLines(label: string): string[] {
-  const words = label.split(" ");
-  const lines: string[] = [];
-  let cur = "";
-  for (const w of words) {
-    if (w === "&") { cur += (cur ? " " : "") + w; }
-    else { if (cur) lines.push(cur); cur = w; }
-  }
-  if (cur) lines.push(cur);
-  return lines;
-}
-
-// ── Center person icon ────────────────────────────────────────────────────────
-function PersonCenter() {
-  const cx = PENT_CX;
-  const cy = PENT_CY;
+// ── Boulderer center hex ──────────────────────────────────────────────────────
+function Boulderer({ cx, cy, r }: { cx: number; cy: number; r: number }) {
+  const iconSize = r * 0.9;
   return (
     <g style={{ pointerEvents: "none" }}>
-      <polygon points={hexPts(cx, cy, CENTER_R)} fill="#1a1a1a" />
-      {/* Head */}
-      <circle cx={cx} cy={cy - 8} r={5.5} fill="white" />
-      {/* Beanie — dark fill so it reads against the white head, white stroke outlines it */}
-      <path
-        d={`M ${cx - 6.5},${cy - 11} L ${cx - 6.5},${cy - 13.5} L ${cx - 5},${cy - 13.5} L ${cx - 4.5},${cy - 19} Q ${cx},${cy - 22} ${cx + 4.5},${cy - 19} L ${cx + 5},${cy - 13.5} L ${cx + 6.5},${cy - 13.5} L ${cx + 6.5},${cy - 11} Z`}
-        fill="#1a1a1a"
-        stroke="white"
-        strokeWidth={1.5}
-        strokeLinejoin="round"
+      <polygon points={hexPts(cx, cy, r * 1.34)} fill="rgba(26,24,20,.04)" />
+      <polygon
+        points={hexPts(cx, cy, r * 1.34)}
+        fill="none"
+        stroke="rgba(26,24,20,.22)"
+        strokeWidth="1"
+        strokeDasharray="3 5"
       />
-      {/* Body */}
-      <path
-        d={`M ${cx - 9},${cy + 14} Q ${cx - 9},${cy + 3} ${cx},${cy + 2} Q ${cx + 9},${cy + 3} ${cx + 9},${cy + 14}`}
-        fill="white"
+      <polygon points={hexPts(cx, cy, r)} fill="#1a1814" />
+      <polygon
+        points={hexPts(cx, cy, r)}
+        fill="none"
+        stroke="rgba(255,255,255,.08)"
+        strokeWidth="1"
       />
+      <foreignObject
+        x={cx - iconSize / 2}
+        y={cy - iconSize / 2}
+        width={iconSize}
+        height={iconSize}
+      >
+        <div
+          style={{
+            width: "100%",
+            height: "100%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <User color="#f6f7f8" strokeWidth={1.6} size={iconSize} />
+        </div>
+      </foreignObject>
     </g>
   );
 }
 
-// ── Goal marker — five-pointed star, perched on the upper-right of the hex ──
-const GOAL_STAR_COLOR = "#f5b800";
-const GOAL_STAR_STROKE = "#7a5a00";
+// ── Goal marker (tag style, tucked at upper-right vertex) ─────────────────────
+function GoalTag({ cx, cy }: { cx: number; cy: number }) {
+  return (
+    <g className={styles.goalTag} transform={`translate(${cx} ${cy}) rotate(14)`}>
+      <rect x="-13" y="-7" width="26" height="14" rx="2" />
+      <line x1="-13" y1="0" x2="-9" y2="0" />
+      <circle cx="-13" cy="0" r="1.2" fill="rgba(26,24,20,.6)" />
+      <text x="0" y="3.2" textAnchor="middle">
+        GOAL
+      </text>
+    </g>
+  );
+}
 
-function goalStarPts(cx: number, cy: number, r: number): string {
-  // Five-pointed star: alternating outer (r) and inner (r * 0.42) vertices.
-  const inner = r * 0.42;
-  const pts: string[] = [];
-  for (let i = 0; i < 10; i++) {
-    const radius = i % 2 === 0 ? r : inner;
-    const a = (i * 36 - 90) * (Math.PI / 180);
-    pts.push(`${cx + radius * Math.cos(a)},${cy + radius * Math.sin(a)}`);
-  }
-  return pts.join(" ");
+// ── HexNode (category or leaf) ────────────────────────────────────────────────
+interface HexNodeProps {
+  kind: "cat" | "leaf";
+  cx: number;
+  cy: number;
+  r: number;
+  color: string;
+  iconId?: string;
+  initials?: string;
+  label: string;
+  sublabel?: string;
+  selected?: boolean;
+  inactive?: boolean;
+  isGoal?: boolean;
+  onClick?: () => void;
+}
+
+function HexNode({
+  kind,
+  cx,
+  cy,
+  r,
+  color,
+  iconId,
+  initials,
+  label,
+  sublabel,
+  selected,
+  inactive,
+  isGoal: isGoalProp,
+  onClick,
+}: HexNodeProps) {
+  const dim = inactive ? 0.45 : 1;
+  const scale = selected ? 1.05 : 1;
+  const transform = `translate(${cx} ${cy}) scale(${scale}) translate(${-cx} ${-cy})`;
+  const labelGap = kind === "cat" ? r * 1.25 : r * 1.45;
+  const lp =
+    kind === "cat"
+      ? { x: cx, y: cy + r + 23, anchor: "middle" as const }
+      : radialLabel(cx, cy, CX, CY, labelGap);
+  // Upper-right vertex on flat-top hex: angle -60° (300°).
+  const tagX = cx + (r + 6) * Math.cos(-Math.PI / 3);
+  const tagY = cy + (r + 6) * Math.sin(-Math.PI / 3);
+  return (
+    <g
+      transform={transform}
+      onClick={onClick}
+      style={{
+        cursor: onClick ? "pointer" : "default",
+        opacity: dim,
+        transition: "transform .35s cubic-bezier(.2,.7,.2,1), opacity .25s",
+      }}
+    >
+      {selected && (
+        <polygon
+          points={hexPts(cx, cy, r * 1.34)}
+          fill="none"
+          stroke={color}
+          strokeWidth="1"
+          strokeDasharray="3 5"
+          opacity=".65"
+        />
+      )}
+      <polygon points={hexPts(cx, cy, r * 1.18)} fill={color} opacity={selected ? 0.16 : 0.08} />
+      <polygon points={hexPts(cx, cy, r)} fill={color} filter="url(#hexShadow)" />
+      <polygon
+        points={hexPts(cx, cy, r - 1.5)}
+        fill="none"
+        stroke="rgba(255,255,255,.18)"
+        strokeWidth="1"
+      />
+
+      {kind === "cat" && iconId && (
+        <g style={{ pointerEvents: "none" }} transform={`translate(${cx - 14} ${cy - 14})`}>
+          <CatIcon id={iconId} size={28} />
+        </g>
+      )}
+
+      {kind === "leaf" && initials && (
+        <text
+          x={cx}
+          y={cy + 1}
+          textAnchor="middle"
+          dominantBaseline="central"
+          fontFamily={FONT_MONO}
+          fontSize={13}
+          fontWeight={600}
+          letterSpacing="0.08em"
+          fill="white"
+          style={{ pointerEvents: "none" }}
+        >
+          {initials}
+        </text>
+      )}
+
+      {isGoalProp && (
+        <g style={{ pointerEvents: "none" }}>
+          <GoalTag cx={tagX} cy={tagY} />
+        </g>
+      )}
+
+      {kind === "cat" ? (
+        <>
+          <text
+            x={cx}
+            y={cy + r + 23}
+            textAnchor="middle"
+            fontFamily={FONT_DISPLAY}
+            fontSize={14}
+            fontWeight={600}
+            letterSpacing="-.005em"
+            fill="#1a1814"
+            stroke="#f5f6f6"
+            strokeWidth={4}
+            strokeLinejoin="round"
+            paintOrder="stroke"
+            style={{ pointerEvents: "none" }}
+          >
+            {label}
+          </text>
+          {sublabel && (
+            <text
+              x={cx}
+              y={cy + r + 37}
+              textAnchor="middle"
+              fontFamily={FONT_MONO}
+              fontSize={9}
+              letterSpacing="0.14em"
+              fill="#8d8f92"
+              stroke="#f5f6f6"
+              strokeWidth={3}
+              strokeLinejoin="round"
+              paintOrder="stroke"
+              style={{ pointerEvents: "none", textTransform: "uppercase" }}
+            >
+              {sublabel}
+            </text>
+          )}
+        </>
+      ) : (
+        <text
+          x={lp.x}
+          y={lp.y}
+          textAnchor={lp.anchor}
+          dominantBaseline="central"
+          fontFamily={FONT_DISPLAY}
+          fontSize={12.5}
+          fontWeight={500}
+          letterSpacing="-.005em"
+          fill="#1a1814"
+          stroke="#f5f6f6"
+          strokeWidth={4}
+          strokeLinejoin="round"
+          paintOrder="stroke"
+          style={{ pointerEvents: "none" }}
+        >
+          {label}
+        </text>
+      )}
+    </g>
+  );
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
 export function SkillTreePage() {
   const [activeCatId, setActiveCatId] = useState<string | null>(null);
   const [selectedLeafId, setSelectedLeafId] = useState<string | null>(null);
-  const { isGoal } = useGoals();
+  const { goals, isGoal } = useGoals();
 
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const gRef = useRef<SVGGElement>(null);
   const viewRef = useRef<View>({ x: 0, y: 0, k: 1 });
-  const svgRef = useRef<SVGSVGElement>(null);
-
-  const containerRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ sx: number; sy: number; vx: number; vy: number } | null>(null);
   const hasDragged = useRef(false);
-  const rafRef = useRef<number | null>(null);
-  const momentumRef = useRef<number | null>(null);
-  // Rolling position history for stable velocity measurement
-  const posHistoryRef = useRef<Array<{ x: number; y: number; t: number }>>([]);
-  const initialFitDone = useRef(false);
+  const animRef = useRef<number | null>(null);
+  const sizeRef = useRef<{ width: number; height: number }>({ width: 0, height: 0 });
+  const lastFocusRef = useRef<number | null>(null);
 
   const activeCat = useMemo(
-    () => SKILL_TREE.find((n) => n.id === activeCatId && !isLeaf(n)) as TreeBranch | undefined,
+    () =>
+      SKILL_TREE.find((n) => n.id === activeCatId && !isLeaf(n)) as TreeBranch | undefined,
     [activeCatId],
-  );
-  const catIdx = SKILL_TREE.findIndex((n) => n.id === activeCatId);
-  const [catX, catY] = catIdx >= 0 ? catPos(catIdx) : [PENT_CX, PENT_CY];
-  const catColor = activeCatId ? (CATEGORY_COLORS[activeCatId] ?? "#888") : "#888";
-  const l1Nodes = activeCat?.children ?? [];
-
-  const l1Positions = useMemo(
-    () => (catIdx >= 0 ? calcL1Positions(catIdx, l1Nodes.length) : []),
-    [catIdx, l1Nodes.length],
   );
 
   const selectedLeaf = useMemo((): TreeLeaf | null => {
     if (!selectedLeafId) return null;
-    function find(nodes: TreeNode[]): TreeLeaf | null {
-      for (const n of nodes) {
-        if (n.id === selectedLeafId && isLeaf(n)) return n as TreeLeaf;
-        if (!isLeaf(n)) {
-          const found = find((n as TreeBranch).children);
-          if (found) return found;
-        }
-      }
-      return null;
-    }
-    return find(SKILL_TREE);
+    return findLeaf(SKILL_TREE, selectedLeafId);
   }, [selectedLeafId]);
 
-  const spring = { type: "spring" as const, stiffness: 280, damping: 22 };
+  const selectedCategory = useMemo((): TreeBranch | null => {
+    if (!selectedLeafId) return null;
+    return getLeafCategory(SKILL_TREE, selectedLeafId);
+  }, [selectedLeafId]);
 
-  // ── Apply transform directly to DOM — bypasses React re-render ────────────
+  const catColor = selectedCategory
+    ? CATEGORY_COLORS[selectedCategory.id] ?? "#888"
+    : activeCatId
+      ? CATEGORY_COLORS[activeCatId] ?? "#888"
+      : "#888";
+
+  const skillCount = useMemo(
+    () =>
+      SKILL_TREE.reduce(
+        (a, c) => a + (isLeaf(c) ? 1 : (c as TreeBranch).children.length),
+        0,
+      ),
+    [],
+  );
+
+  // ── Transform helpers ──────────────────────────────────────────────────────
+  // Apply pan/zoom as an SVG `transform` on an inner <g>, not a CSS transform
+  // on the <svg> — the latter rasterizes then scales, blurring text.
   const applyTransform = useCallback((v: View) => {
-    if (svgRef.current) {
-      svgRef.current.style.transform = `translate(${v.x}px,${v.y}px) scale(${v.k})`;
+    if (gRef.current) {
+      gRef.current.setAttribute(
+        "transform",
+        `translate(${v.x},${v.y}) scale(${v.k})`,
+      );
     }
   }, []);
 
-  // ── Animated view transition (easeOutCubic via rAF) ───────────────────────
-  const animateTo = useCallback((target: View, duration = 600) => {
-    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-    if (momentumRef.current !== null) { cancelAnimationFrame(momentumRef.current); momentumRef.current = null; }
-    const start = { ...viewRef.current };
-    const t0 = performance.now();
-    const tick = (now: number) => {
-      const t = Math.min(1, (now - t0) / duration);
-      const ease = 1 - Math.pow(1 - t, 3);
-      const next: View = {
-        x: start.x + (target.x - start.x) * ease,
-        y: start.y + (target.y - start.y) * ease,
-        k: start.k + (target.k - start.k) * ease,
-      };
-      viewRef.current = next;
-      applyTransform(next);
-      if (t < 1) rafRef.current = requestAnimationFrame(tick);
-      else rafRef.current = null;
-    };
-    rafRef.current = requestAnimationFrame(tick);
-  }, [applyTransform]);
-
-  // ── Fit entire tree (5 categories) into viewport ──────────────────────────
-  const fitToAll = useCallback((anim = true) => {
-    const el = containerRef.current;
-    if (!el) return;
-    const { width, height } = el.getBoundingClientRect();
-    if (width < 50) return;
-    const fitRadius = PENT_R * 2.6;
-    const k = Math.min(width, height) / (fitRadius * 2);
-    const target: View = { k, x: width / 2 - PENT_CX * k, y: height / 2 - PENT_CY * k };
-    if (anim) {
-      animateTo(target, 500);
-    } else {
-      viewRef.current = target;
-      applyTransform(target);
+  const cancelAnim = useCallback(() => {
+    if (animRef.current !== null) {
+      cancelAnimationFrame(animRef.current);
+      animRef.current = null;
     }
-  }, [animateTo, applyTransform]);
+  }, []);
 
-  // ── Fit expanded category + its leaf nodes into viewport ──────────────────
-  const focusOnCat = useCallback((catId: string) => {
-    const el = containerRef.current;
-    if (!el) return;
-    const { width, height } = el.getBoundingClientRect();
-    if (width < 50) return;
-    const idx = SKILL_TREE.findIndex((n) => n.id === catId);
-    if (idx < 0) return;
-    const cat = SKILL_TREE[idx];
-    if (isLeaf(cat)) return;
-    const children = (cat as TreeBranch).children;
-    const positions = calcL1Positions(idx, children.length);
-    const [cx, cy] = catPos(idx);
-    const pts = [
-      { x: PENT_CX, y: PENT_CY, pad: CENTER_R + 10 },
-      { x: cx, y: cy, pad: CAT_GLOW_R + 50 },
-      ...positions.map(([lx, ly]: [number, number]) => ({ x: lx, y: ly, pad: L1_GLOW_R + 35 })),
-    ];
-    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-    pts.forEach(({ x, y, pad }) => {
-      minX = Math.min(minX, x - pad); maxX = Math.max(maxX, x + pad);
-      minY = Math.min(minY, y - pad); maxY = Math.max(maxY, y + pad);
-    });
-    const margin = 72;
-    const rawK = Math.min(
-      (width - margin * 2) / (maxX - minX),
-      (height - margin * 2) / (maxY - minY),
-    );
-    const k = Math.max(0.3, Math.min(1.6, rawK * 0.85));
-    animateTo({
-      k,
-      x: width / 2 - ((minX + maxX) / 2) * k,
-      y: height / 2 - ((minY + maxY) / 2) * k,
-    }, 600);
-  }, [animateTo]);
+  const animateTo = useCallback(
+    (target: View, duration = 480) => {
+      cancelAnim();
+      const start = { ...viewRef.current };
+      const t0 = performance.now();
+      const step = (t: number) => {
+        const p = Math.min(1, (t - t0) / duration);
+        const e = 1 - Math.pow(1 - p, 3);
+        const next: View = {
+          x: start.x + (target.x - start.x) * e,
+          y: start.y + (target.y - start.y) * e,
+          k: start.k + (target.k - start.k) * e,
+        };
+        viewRef.current = next;
+        applyTransform(next);
+        if (p < 1) animRef.current = requestAnimationFrame(step);
+        else animRef.current = null;
+      };
+      animRef.current = requestAnimationFrame(step);
+    },
+    [applyTransform, cancelAnim],
+  );
 
-  // ── Initial fit — poll until container has real dimensions ─────────────────
-  useEffect(() => {
-    let cancelled = false;
-    const tryFit = () => {
-      if (cancelled) return;
-      const el = containerRef.current;
-      const rect = el?.getBoundingClientRect();
-      if (!rect || rect.width < 50 || rect.height < 50) {
-        requestAnimationFrame(tryFit);
-        return;
+  const computeTarget = useCallback((catIdx: number | null): View | null => {
+    const { width, height } = sizeRef.current;
+    if (width < 60 || height < 60) return null;
+    if (catIdx == null) {
+      const span = (RING_CAT + RING_LEAF_BASE + 70) * 2;
+      const k = Math.max(0.2, Math.min(width / span, height / span, 1.15));
+      return { k, x: width / 2 - CX * k, y: height / 2 - CY * k };
+    }
+    const [px, py] = catPos(catIdx);
+    const fx = CX + (px - CX) * 0.6;
+    const fy = CY + (py - CY) * 0.6;
+    const k = Math.max(0.2, Math.min(width / 780, height / 660, 1.3));
+    return { k, x: width / 2 - fx * k, y: height / 2 - fy * k };
+  }, []);
+
+  const applyTarget = useCallback(
+    (catIdx: number | null, animated: boolean) => {
+      const target = computeTarget(catIdx);
+      if (!target) return false;
+      lastFocusRef.current = catIdx;
+      if (animated) {
+        animateTo(target, 520);
+      } else {
+        cancelAnim();
+        viewRef.current = target;
+        applyTransform(target);
       }
-      fitToAll(false);
-      initialFitDone.current = true;
-    };
-    requestAnimationFrame(tryFit);
-    return () => { cancelled = true; };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+      return true;
+    },
+    [animateTo, applyTransform, cancelAnim, computeTarget],
+  );
 
-  // ── Re-frame when category expands/collapses ──────────────────────────────
+  // ── ResizeObserver + initial fit ──────────────────────────────────────────
   useEffect(() => {
-    if (!initialFitDone.current) return;
-    const id = requestAnimationFrame(() => {
-      if (activeCatId) focusOnCat(activeCatId);
-      else fitToAll(true);
-    });
-    return () => cancelAnimationFrame(id);
-  }, [activeCatId, focusOnCat, fitToAll]);
-
-  // ── Wheel zoom — lerp-animated so rapid scrolling stays smooth ────────────
-  useEffect(() => {
-    const el = containerRef.current;
+    const el = wrapRef.current;
     if (!el) return;
-
-    let wheelRafId: number | null = null;
-    const wheelTarget = { x: 0, y: 0, k: 1, active: false };
-
-    const wheelTick = () => {
-      if (!wheelTarget.active) return;
-      const curr = viewRef.current;
-      const dx = wheelTarget.x - curr.x;
-      const dy = wheelTarget.y - curr.y;
-      const dk = wheelTarget.k - curr.k;
-      if (Math.abs(dx) < 0.15 && Math.abs(dy) < 0.15 && Math.abs(dk) < 0.0004) {
-        viewRef.current = { x: wheelTarget.x, y: wheelTarget.y, k: wheelTarget.k };
-        applyTransform(viewRef.current);
-        wheelTarget.active = false;
-        wheelRafId = null;
-        return;
+    const ro = new ResizeObserver((entries) => {
+      const cr = entries[0]?.contentRect;
+      if (!cr) return;
+      sizeRef.current = { width: cr.width, height: cr.height };
+      if (cr.width >= 60 && cr.height >= 60) {
+        applyTarget(lastFocusRef.current, false);
       }
-      const lf = 0.22;
-      const next: View = { x: curr.x + dx * lf, y: curr.y + dy * lf, k: curr.k + dk * lf };
-      viewRef.current = next;
-      applyTransform(next);
-      wheelRafId = requestAnimationFrame(wheelTick);
-    };
+    });
+    ro.observe(el);
+    const r = el.getBoundingClientRect();
+    sizeRef.current = { width: r.width, height: r.height };
+    if (r.width >= 60 && r.height >= 60) {
+      applyTarget(null, false);
+    }
+    return () => ro.disconnect();
+  }, [applyTarget]);
 
-    const handler = (e: WheelEvent) => {
-      e.preventDefault();
-      if (rafRef.current !== null) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
-      if (momentumRef.current !== null) { cancelAnimationFrame(momentumRef.current); momentumRef.current = null; }
-      const rect = el.getBoundingClientRect();
-      const mx = e.clientX - rect.left;
-      const my = e.clientY - rect.top;
-      const delta = -e.deltaY * 0.0015;
-      // Accumulate from pending target so rapid events compound correctly
-      const base = wheelTarget.active ? wheelTarget : viewRef.current;
-      const newK = Math.min(4, Math.max(0.15, base.k * (1 + delta)));
-      const ratio = newK / base.k;
-      wheelTarget.x = mx - (mx - base.x) * ratio;
-      wheelTarget.y = my - (my - base.y) * ratio;
-      wheelTarget.k = newK;
-      wheelTarget.active = true;
-      if (wheelRafId === null) wheelRafId = requestAnimationFrame(wheelTick);
-    };
+  // ── Animate focus when active category changes ─────────────────────────────
+  useEffect(() => {
+    if (sizeRef.current.width < 60) return;
+    const idx =
+      activeCatId == null ? null : SKILL_TREE.findIndex((c) => c.id === activeCatId);
+    applyTarget(activeCatId == null ? null : idx, true);
+  }, [activeCatId, applyTarget]);
 
-    el.addEventListener("wheel", handler, { passive: false });
-    return () => {
-      el.removeEventListener("wheel", handler);
-      if (wheelRafId !== null) cancelAnimationFrame(wheelRafId);
-    };
-  }, [applyTransform]);
+  // ── Drag pan (bounded) ─────────────────────────────────────────────────────
+  const clampView = useCallback(
+    (v: View): View => {
+      const home = computeTarget(lastFocusRef.current);
+      if (!home) return v;
+      const { width, height } = sizeRef.current;
+      const maxDX = width * 0.35;
+      const maxDY = height * 0.35;
+      return {
+        k: v.k,
+        x: Math.min(home.x + maxDX, Math.max(home.x - maxDX, v.x)),
+        y: Math.min(home.y + maxDY, Math.max(home.y - maxDY, v.y)),
+      };
+    },
+    [computeTarget],
+  );
 
-  // ── Drag to pan ───────────────────────────────────────────────────────────
-  function onMouseDown(e: React.MouseEvent<HTMLDivElement>) {
+  const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
     hasDragged.current = false;
-    if (rafRef.current !== null) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
-    if (momentumRef.current !== null) { cancelAnimationFrame(momentumRef.current); momentumRef.current = null; }
-    posHistoryRef.current = [];
-    dragRef.current = { sx: e.clientX, sy: e.clientY, vx: viewRef.current.x, vy: viewRef.current.y };
-  }
-
-  function onMouseMove(e: React.MouseEvent<HTMLDivElement>) {
+    cancelAnim();
+    dragRef.current = {
+      sx: e.clientX,
+      sy: e.clientY,
+      vx: viewRef.current.x,
+      vy: viewRef.current.y,
+    };
+  };
+  const onMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!dragRef.current) return;
-    const now = performance.now();
     const dx = e.clientX - dragRef.current.sx;
     const dy = e.clientY - dragRef.current.sy;
     if (Math.abs(dx) > 4 || Math.abs(dy) > 4) hasDragged.current = true;
-
-    // Rolling 80ms window — stable velocity, immune to single-frame spikes
-    const history = posHistoryRef.current;
-    history.push({ x: e.clientX, y: e.clientY, t: now });
-    const cutoff = now - 80;
-    while (history.length > 1 && history[0].t < cutoff) history.shift();
-
-    const next: View = { ...viewRef.current, x: dragRef.current.vx + dx, y: dragRef.current.vy + dy };
+    const next = clampView({
+      ...viewRef.current,
+      x: dragRef.current.vx + dx,
+      y: dragRef.current.vy + dy,
+    });
     viewRef.current = next;
     applyTransform(next);
-  }
-
-  function onMouseUp() {
-    if (!dragRef.current) return;
+  };
+  const onMouseUp = () => {
     dragRef.current = null;
+  };
 
-    const history = posHistoryRef.current;
-    posHistoryRef.current = [];
-    if (history.length < 2) return;
-
-    const oldest = history[0];
-    const newest = history[history.length - 1];
-    const dt = newest.t - oldest.t;
-    if (dt < 16) return;
-
-    const rawVx = (newest.x - oldest.x) / dt;
-    const rawVy = (newest.y - oldest.y) / dt;
-    const speed = Math.sqrt(rawVx * rawVx + rawVy * rawVy);
-    if (speed < 0.05) return;
-
-    // Cap at 2.5 px/ms to prevent runaway momentum
-    const scale = Math.min(1, 2.5 / speed);
-    let velX = rawVx * scale;
-    let velY = rawVy * scale;
-    let lastT = performance.now();
-
-    const tick = (now: number) => {
-      const dt2 = Math.min(now - lastT, 32);
-      lastT = now;
-      const friction = Math.pow(0.92, dt2 / 16);
-      velX *= friction;
-      velY *= friction;
-      if (Math.sqrt(velX * velX + velY * velY) < 0.008) {
-        momentumRef.current = null;
-        return;
-      }
-      const next: View = { ...viewRef.current, x: viewRef.current.x + velX * dt2, y: viewRef.current.y + velY * dt2 };
-      viewRef.current = next;
-      applyTransform(next);
-      momentumRef.current = requestAnimationFrame(tick);
-    };
-    momentumRef.current = requestAnimationFrame(tick);
-  }
-
-  // ── Zoom buttons ──────────────────────────────────────────────────────────
-  function zoomBy(factor: number) {
-    const el = containerRef.current;
-    if (!el) return;
-    const { width, height } = el.getBoundingClientRect();
-    const mx = width / 2;
-    const my = height / 2;
-    const { x, y, k } = viewRef.current;
-    const newK = Math.min(4, Math.max(0.15, k * factor));
-    const ratio = newK / k;
-    animateTo({ x: mx - (mx - x) * ratio, y: my - (my - y) * ratio, k: newK }, 300);
-  }
-
-  // ── Click handlers ────────────────────────────────────────────────────────
-  function onCatClick(id: string) {
+  // ── Click handlers ─────────────────────────────────────────────────────────
+  const onCatClick = (id: string | null) => {
     if (hasDragged.current) return;
-    setActiveCatId((prev) => (prev === id ? null : id));
+    setActiveCatId((prev) => (id === null ? null : prev === id ? null : id));
     setSelectedLeafId(null);
-  }
-
-  function onLeafClick(node: TreeNode) {
+  };
+  const onLeafClick = (id: string) => {
     if (hasDragged.current) return;
-    if (isLeaf(node)) setSelectedLeafId((p) => (p === node.id ? null : node.id));
-  }
+    setSelectedLeafId((prev) => (prev === id ? null : id));
+  };
 
   return (
     <div className={styles.page}>
+      {/* Header */}
       <header className={styles.header}>
-        <span className={styles.headerTitle}>Skill Tree</span>
+        <div className={styles.headerRow}>
+          <div className={styles.topLeft}>
+            <div className={styles.bigTitle}>Skill Tree</div>
+            <div className={styles.subtitle}>
+              {SKILL_TREE.length} areas · {skillCount} skills · {goals.length}/{MAX_GOALS}{" "}
+              goals set
+            </div>
+          </div>
+          <div className={styles.viewPicker} role="tablist">
+            <button className={styles.viewPickerActive}>
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polygon points="12,3 19,7 19,17 12,21 5,17 5,7" />
+              </svg>
+              Map
+            </button>
+            <div className={styles.viewPickerDivider} />
+            <button>
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="5" y1="7" x2="19" y2="7" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <line x1="5" y1="17" x2="19" y2="17" />
+              </svg>
+              List
+            </button>
+          </div>
+        </div>
       </header>
 
-      <GoalsDashboard />
-
-      <div
-        ref={containerRef}
-        className={styles.treeCanvas}
-        onMouseDown={onMouseDown}
-        onMouseMove={onMouseMove}
-        onMouseUp={onMouseUp}
-        onMouseLeave={onMouseUp}
-      >
-        <div className={styles.zoomControls}>
-          <button className={styles.zoomBtn} onClick={() => zoomBy(1.2)}>+</button>
-          <button className={styles.zoomBtn} onClick={() => zoomBy(1 / 1.2)}>−</button>
-          <button className={styles.zoomBtn} style={{ fontSize: 14 }} onClick={() => fitToAll(true)}>⤢</button>
+      {/* Goal coverage bar */}
+      <div className={styles.gBar}>
+        <div className={styles.gBarTitle}>
+          <span>Goals</span>
+          <span className={styles.gBarTally}>
+            <strong>{goals.length}</strong>
+            <span className={styles.gBarTallySlash}>/</span>
+            <span>{MAX_GOALS}</span>
+          </span>
         </div>
-
-        <svg
-          ref={svgRef}
-          width={W}
-          height={H}
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            userSelect: "none",
-            transformOrigin: "0 0",
-            willChange: "transform",
-          }}
-        >
-          <defs>
-            <filter id="hex-shadow" x="-40%" y="-40%" width="180%" height="180%">
-              <feDropShadow dx="0" dy="4" stdDeviation="7" floodColor="#000000" floodOpacity="0.18" />
-            </filter>
-          </defs>
-
-          {/* ── Concentric guide rings ── */}
-          <g opacity={0.4}>
-            <circle
-              cx={PENT_CX} cy={PENT_CY}
-              r={PENT_R + CAT_R / 2}
-              fill="none" stroke="#E6E6EA" strokeWidth={1} strokeDasharray="2 6"
-            />
-            {activeCatId && (
-              <circle
-                cx={PENT_CX} cy={PENT_CY}
-                r={PENT_R + L1_FORWARD + L1_R / 2}
-                fill="none" stroke="#E6E6EA" strokeWidth={1} strokeDasharray="2 6"
-              />
-            )}
-          </g>
-
-          {/* ── Center → category connecting lines ── */}
-          {SKILL_TREE.map((cat, i) => {
-            const [cx, cy] = catPos(i);
-            const isActive = cat.id === activeCatId;
-            const isInactive = activeCatId !== null && !isActive;
+        <div className={styles.gBarChips}>
+          {goals.map((g) => {
+            const leaf = findLeaf(SKILL_TREE, g.leafId);
+            const cat = getLeafCategory(SKILL_TREE, g.leafId);
+            if (!leaf || !cat) return null;
             const color = CATEGORY_COLORS[cat.id] ?? "#888";
+            const isSel = selectedLeafId === g.leafId;
             return (
-              <line
-                key={`c2c-${cat.id}`}
-                x1={PENT_CX} y1={PENT_CY} x2={cx} y2={cy}
-                stroke={color}
-                strokeWidth={isActive ? 2 : 1.5}
-                opacity={isInactive ? 0.12 : isActive ? 0.6 : 0.35}
-                style={{ transition: "opacity 0.2s" }}
-              />
-            );
-          })}
-
-          {/* ── Category → L1 straight connector lines ── */}
-          <AnimatePresence>
-            {l1Nodes.length > 0 && l1Positions.map((pos, i) => {
-              const [l1x, l1y] = pos;
-              const angle = Math.atan2(l1y - catY, l1x - catX);
-              const x1 = catX + CAT_R * Math.cos(angle);
-              const y1 = catY + CAT_R * Math.sin(angle);
-              const x2 = l1x - L1_R * Math.cos(angle);
-              const y2 = l1y - L1_R * Math.sin(angle);
-              return (
-                <motion.path
-                  key={`conn-${activeCatId}-${i}`}
-                  d={`M ${x1},${y1} L ${x2},${y2}`}
-                  stroke={catColor} fill="none" strokeWidth={1.5} opacity={0.45}
-                  initial={{ pathLength: 0 }}
-                  animate={{ pathLength: 1 }}
-                  exit={{ pathLength: 0 }}
-                  transition={{ duration: 0.28, delay: i * 0.05 }}
-                />
-              );
-            })}
-          </AnimatePresence>
-
-          {/* ── L1 leaf nodes ── */}
-          <AnimatePresence>
-            {l1Nodes.map((node, i) => {
-              const [cx, cy] = l1Positions[i] ?? [PENT_CX, PENT_CY];
-              const isSel = node.id === selectedLeafId;
-              const goalActive = isLeaf(node) && isGoal(node.id);
-              const Icon = ICON_MAP[node.id] ?? Zap;
-              const half = L1_ICON / 2;
-              const lines = labelLines(node.label);
-              const starCx = cx + L1_R * Math.cos(-Math.PI / 6);
-              const starCy = cy + L1_R * Math.sin(-Math.PI / 6);
-              return (
-                <motion.g
-                  key={`l1-${activeCatId}-${node.id}`}
-                  onClick={() => onLeafClick(node)}
-                  style={{ cursor: "pointer", transformOrigin: `${cx}px ${cy}px` }}
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: isSel ? 1 : 0.75 }}
-                  exit={{ scale: 0, opacity: 0 }}
-                  transition={{ ...spring, delay: i * 0.06 + 0.1 }}
-                  data-testid={`leaf-${node.id}`}
-                  data-goal={goalActive ? "true" : undefined}
-                >
-                  <polygon points={hexPts(cx, cy, L1_GLOW_R)} fill={catColor} opacity={0.1} />
-                  <polygon
-                    points={hexPts(cx, cy, L1_R)}
-                    fill={catColor}
-                    filter="url(#hex-shadow)"
-                    stroke={goalActive ? GOAL_STAR_COLOR : "none"}
-                    strokeWidth={goalActive ? 2.5 : 0}
-                  />
-                  <Icon
-                    x={cx - half} y={cy - half}
-                    width={L1_ICON} height={L1_ICON}
-                    color="white" strokeWidth={2.5}
-                    style={{ pointerEvents: "none" }}
-                  />
-                  {goalActive && (
-                    <polygon
-                      points={goalStarPts(starCx, starCy, 8)}
-                      fill={GOAL_STAR_COLOR}
-                      stroke={GOAL_STAR_STROKE}
-                      strokeWidth={1}
-                      strokeLinejoin="round"
-                      style={{ pointerEvents: "none" }}
-                      data-testid={`goal-marker-${node.id}`}
-                    />
-                  )}
-                  {lines.map((line, li) => {
-                    const lp = l1LabelProps(cx, cy, li, lines.length);
-                    return (
-                      <text
-                        key={li}
-                        x={lp.x} y={lp.y}
-                        textAnchor={lp.anchor}
-                        dominantBaseline="central"
-                        fill="#6b6b68" fontSize={9.5}
-                        fontFamily={FONT}
-                        style={{ pointerEvents: "none" }}
-                      >
-                        {line}
-                      </text>
-                    );
-                  })}
-                </motion.g>
-              );
-            })}
-          </AnimatePresence>
-
-          {/* ── Center person icon ── */}
-          <PersonCenter />
-
-          {/* ── Category hexagons ── */}
-          {SKILL_TREE.map((cat, i) => {
-            const [cx, cy] = catPos(i);
-            const isActive = cat.id === activeCatId;
-            const isInactive = activeCatId !== null && !isActive;
-            const color = CATEGORY_COLORS[cat.id] ?? "#888";
-            const Icon = ICON_MAP[cat.id] ?? Zap;
-            const half = CAT_ICON / 2;
-            return (
-              <g
-                key={cat.id}
-                onClick={() => onCatClick(cat.id)}
-                style={{ cursor: "pointer", opacity: isInactive ? 0.3 : 1, transition: "opacity 0.2s" }}
+              <button
+                key={g.leafId}
+                className={`${styles.gChip} ${isSel ? styles.gChipSelected : ""}`}
+                style={{ "--cat": color } as React.CSSProperties}
+                onClick={() => {
+                  setActiveCatId(cat.id);
+                  setSelectedLeafId(g.leafId);
+                }}
               >
-                <polygon points={hexPts(cx, cy, CAT_GLOW_R)} fill={color} opacity={isActive ? 0.18 : 0.1} />
-                <polygon points={hexPts(cx, cy, CAT_R)} fill={color} filter="url(#hex-shadow)" />
-                <Icon
-                  x={cx - half} y={cy - half}
-                  width={CAT_ICON} height={CAT_ICON}
-                  color="white" strokeWidth={2}
-                  style={{ pointerEvents: "none" }}
-                />
-                <text
-                  x={cx} y={cy + CAT_GLOW_R + 14}
-                  textAnchor="middle" dominantBaseline="hanging"
-                  fill="#413f39" fontSize={12} fontWeight={700}
-                  fontFamily={FONT}
-                  style={{ pointerEvents: "none" }}
-                >
-                  {cat.label}
-                </text>
-              </g>
+                <span className={styles.gChipDot} />
+                <span className={styles.gChipLeaf}>{leaf.label}</span>
+              </button>
             );
           })}
-        </svg>
+          {Array.from({ length: Math.max(0, MAX_GOALS - goals.length) }).map((_, i) => (
+            <span
+              key={`empty-${i}`}
+              className={`${styles.gChip} ${styles.gChipEmpty}`}
+              style={{ "--cat": "var(--ink-3)" } as React.CSSProperties}
+            >
+              <span className={styles.gChipDot} />
+              <span className={styles.gChipLeaf}>Open slot</span>
+            </span>
+          ))}
+          <span className={styles.gBarHint}>Tap any skill below to set a goal</span>
+        </div>
       </div>
 
-      <AnimatePresence>
-        {selectedLeaf && (
+      {/* Tree canvas + rail */}
+      <div className={styles.canvasOuter}>
+        <div className={styles.canvasInner}>
+          <div
+            ref={wrapRef}
+            className={styles.canvasWrap}
+            onMouseDown={onMouseDown}
+            onMouseMove={onMouseMove}
+            onMouseUp={onMouseUp}
+            onMouseLeave={onMouseUp}
+            onClick={(e) => {
+              if (e.target === e.currentTarget && !hasDragged.current) {
+                setSelectedLeafId(null);
+              }
+            }}
+          >
+            <svg className={styles.treeSvg} width="100%" height="100%">
+              <defs>
+                <filter id="hexShadow" x="-40%" y="-40%" width="180%" height="180%">
+                  <feDropShadow
+                    dx="0"
+                    dy="4"
+                    stdDeviation="6"
+                    floodColor="#000"
+                    floodOpacity="0.16"
+                  />
+                </filter>
+              </defs>
+
+              <g ref={gRef}>
+
+              {/* Dashed guide rings */}
+              <g opacity={0.55}>
+                <circle
+                  cx={CX}
+                  cy={CY}
+                  r={RING_CAT}
+                  fill="none"
+                  stroke="rgba(26,24,20,.18)"
+                  strokeWidth="1"
+                  strokeDasharray="2 8"
+                />
+                {activeCatId && (
+                  <circle
+                    cx={CX}
+                    cy={CY}
+                    r={RING_CAT + RING_LEAF_BASE}
+                    fill="none"
+                    stroke="rgba(26,24,20,.18)"
+                    strokeWidth="1"
+                    strokeDasharray="2 8"
+                  />
+                )}
+              </g>
+
+              {/* Center → categories (drawn under hexes, full center-to-center) */}
+              {SKILL_TREE.map((cat, i) => {
+                const [px, py] = catPos(i);
+                const isActive = cat.id === activeCatId;
+                const isInactive = activeCatId !== null && !isActive;
+                const color = CATEGORY_COLORS[cat.id] ?? "#888";
+                return (
+                  <line
+                    key={`l-${cat.id}`}
+                    x1={CX}
+                    y1={CY}
+                    x2={px}
+                    y2={py}
+                    stroke={color}
+                    strokeWidth={isActive ? 2 : 1.5}
+                    strokeDasharray={isActive ? "0" : "4 6"}
+                    opacity={isInactive ? 0.18 : isActive ? 0.85 : 0.55}
+                    style={{
+                      transition:
+                        "opacity .2s, stroke-width .2s, stroke-dasharray .2s",
+                    }}
+                  />
+                );
+              })}
+
+              {/* Active category → leaves (drawn under hexes, full center-to-center) */}
+              {activeCat &&
+                (() => {
+                  const idx = SKILL_TREE.findIndex((c) => c.id === activeCatId);
+                  const [px, py] = catPos(idx);
+                  const positions = leafPositions(idx, activeCat.children.length);
+                  const color = CATEGORY_COLORS[activeCatId!] ?? "#888";
+                  return positions.map(([lx, ly], i) => (
+                    <line
+                      key={`ll-${activeCatId}-${i}`}
+                      x1={px}
+                      y1={py}
+                      x2={lx}
+                      y2={ly}
+                      stroke={color}
+                      strokeWidth="1.5"
+                      opacity="0.55"
+                    />
+                  ));
+                })()}
+
+              {/* Boulderer center */}
+              <Boulderer cx={CX} cy={CY} r={R_CENTER} />
+
+              {/* Category hexes */}
+              {SKILL_TREE.map((cat, i) => {
+                if (isLeaf(cat)) return null;
+                const branch = cat as TreeBranch;
+                const [px, py] = catPos(i);
+                const isActive = cat.id === activeCatId;
+                const isInactive = activeCatId !== null && !isActive;
+                const goalsInCat = branch.children.filter(
+                  (l) => isLeaf(l) && isGoal((l as TreeLeaf).id),
+                ).length;
+                const sub =
+                  goalsInCat > 0
+                    ? `${branch.children.length} skills · ${goalsInCat} goal${goalsInCat === 1 ? "" : "s"}`
+                    : `${branch.children.length} skills`;
+                return (
+                  <HexNode
+                    key={cat.id}
+                    kind="cat"
+                    cx={px}
+                    cy={py}
+                    r={R_CAT}
+                    color={CATEGORY_COLORS[cat.id] ?? "#888"}
+                    iconId={cat.id}
+                    label={cat.label}
+                    sublabel={sub}
+                    selected={isActive}
+                    inactive={isInactive}
+                    onClick={() => onCatClick(cat.id)}
+                  />
+                );
+              })}
+
+              {/* Active category — leaves */}
+              {activeCat &&
+                (() => {
+                  const idx = SKILL_TREE.findIndex((c) => c.id === activeCatId);
+                  const positions = leafPositions(idx, activeCat.children.length);
+                  return activeCat.children.map((leaf: TreeNode, i: number) => {
+                    if (!isLeaf(leaf)) return null;
+                    const tl = leaf as TreeLeaf;
+                    const [lx, ly] = positions[i];
+                    return (
+                      <HexNode
+                        key={tl.id}
+                        kind="leaf"
+                        cx={lx}
+                        cy={ly}
+                        r={R_LEAF}
+                        color={CATEGORY_COLORS[activeCatId!] ?? "#888"}
+                        initials={leafInitials(tl.label)}
+                        label={tl.label}
+                        selected={tl.id === selectedLeafId}
+                        isGoal={isGoal(tl.id)}
+                        onClick={() => onLeafClick(tl.id)}
+                      />
+                    );
+                  });
+                })()}
+              </g>
+            </svg>
+
+            {/* Breadcrumb */}
+            <div className={styles.breadcrumb}>
+              <button
+                className={`${styles.crumb} ${activeCatId ? "" : styles.crumbActive}`}
+                onClick={() => onCatClick(null)}
+              >
+                All Skills
+              </button>
+              {activeCat && (
+                <>
+                  <span className={styles.crumbSep}>/</span>
+                  <span className={`${styles.crumb} ${styles.crumbActive}`}>
+                    {activeCat.label}
+                  </span>
+                </>
+              )}
+            </div>
+
+            {/* Legend */}
+            <div className={styles.legend}>
+              <span
+                className={styles.swatch}
+                style={{ "--cat": "var(--ink-2)" } as React.CSSProperties}
+              >
+                <span className={styles.swatchDot} /> Goal
+              </span>
+              <span
+                className={`${styles.swatch} ${styles.swatchGhost}`}
+                style={{ "--cat": "var(--ink-2)" } as React.CSSProperties}
+              >
+                <span className={styles.swatchDot} /> Empty slot
+              </span>
+              <span className={styles.legendHint}>Drag to pan</span>
+            </div>
+
+          </div>
+
+          {/* Detail rail */}
           <SkillDetailPanel
             leaf={selectedLeaf}
             categoryColor={catColor}
             onClose={() => setSelectedLeafId(null)}
           />
-        )}
-      </AnimatePresence>
+        </div>
+      </div>
     </div>
   );
 }
