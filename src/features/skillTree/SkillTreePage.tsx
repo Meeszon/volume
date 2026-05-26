@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import { Fragment, useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { User } from "lucide-react";
 import { SKILL_TREE, CATEGORY_COLORS } from "../../data/skillTree";
 import { isLeaf } from "../../utils/tree";
@@ -118,6 +118,24 @@ function hexPts(cx: number, cy: number, r: number): string {
   }).join(" ");
 }
 
+// Distance from a hex center along direction `theta` to the polygon edge at
+// radius `r`. Used to trim connector lines so they terminate exactly at the
+// full-colour hex boundary — otherwise the line passes through the surrounding
+// semi-transparent tint ring (r → r*1.18) and shows through under the glyph.
+// Matches `hexPts`: vertices at k*60°, edge midpoints at π/6 + k*π/3, apothem
+// = r·cos(π/6).
+function hexEdgeDistance(r: number, theta: number): number {
+  const PI_3 = Math.PI / 3;
+  const PI_6 = Math.PI / 6;
+  // Signed angular offset from the nearest edge midpoint, in [-π/6, π/6].
+  // Written as `x - p·round(x/p)` rather than `((x % p) + p) % p - p/2` because
+  // the latter collapses x ≡ 0 (mod p) to -p/2 instead of 0 — which over-trims
+  // any line aimed straight at an edge midpoint (notably the top spoke at θ=-π/2).
+  const shifted = theta - PI_6;
+  const phi = shifted - PI_3 * Math.round(shifted / PI_3);
+  return (r * Math.cos(PI_6)) / Math.cos(phi);
+}
+
 function radialLabel(cx: number, cy: number, refX: number, refY: number, gap: number) {
   const theta = Math.atan2(cy - refY, cx - refX);
   return {
@@ -213,6 +231,16 @@ interface HexNodeProps {
   inactive?: boolean;
   isGoal?: boolean;
   onClick?: () => void;
+  // Delay (ms) before the selected dashed ring fades in — used to choreograph
+  // the category open sequence (line draws first, then the ring).
+  ringAnimDelay?: number;
+  // When true, the selected ring plays its reverse (close) animation.
+  isClosing?: boolean;
+  // Optional override: controls whether the dashed ring renders, independent
+  // of `selected`. When undefined, defaults to `selected`. The category hex
+  // uses this to keep the ring visible across the full close window while
+  // letting the inner scale/tint deselect partway through.
+  ringActive?: boolean;
 }
 
 function HexNode({
@@ -229,7 +257,11 @@ function HexNode({
   inactive,
   isGoal: isGoalProp,
   onClick,
+  ringAnimDelay,
+  isClosing,
+  ringActive,
 }: HexNodeProps) {
+  const showRing = ringActive ?? selected;
   const dim = inactive ? 0.45 : 1;
   const scale = selected ? 1.05 : 1;
   const transform = `translate(${cx} ${cy}) scale(${scale}) translate(${-cx} ${-cy})`;
@@ -251,17 +283,27 @@ function HexNode({
         transition: "transform .35s cubic-bezier(.2,.7,.2,1), opacity .25s",
       }}
     >
-      {selected && (
+      {showRing && (
         <polygon
+          className={`${styles.selectedRing} ${isClosing ? styles.closing : ""}`}
           points={hexPts(cx, cy, r * 1.34)}
           fill="none"
           stroke={color}
           strokeWidth="1"
           strokeDasharray="3 5"
-          opacity=".65"
+          style={
+            !isClosing && ringAnimDelay
+              ? ({ animationDelay: `${ringAnimDelay}ms` } as React.CSSProperties)
+              : undefined
+          }
         />
       )}
-      <polygon points={hexPts(cx, cy, r * 1.18)} fill={color} opacity={selected ? 0.16 : 0.08} />
+      <polygon
+        points={hexPts(cx, cy, r * 1.18)}
+        fill={color}
+        opacity={selected ? 0.16 : 0.08}
+        style={{ transition: "opacity .35s cubic-bezier(.2,.7,.2,1)" }}
+      />
       <polygon points={hexPts(cx, cy, r)} fill={color} filter="url(#hexShadow)" />
       <polygon
         points={hexPts(cx, cy, r - 1.5)}
@@ -362,8 +404,28 @@ function HexNode({
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
+// Total duration of the reverse (close) sequence, in ms. Matches the longest
+// closing animation (cat line undraw delay + duration). State is held during
+// this window so the elements stay mounted and animate out before unmounting.
+const CLOSE_SEQ_MS = 800;
+
+// Time into the close at which the category hex itself stops looking selected
+// (scale eases back to 1, tint fades from 0.16 → 0.08). Matches the end of the
+// leaf-retract phase so the glyph deselects right after its children collapse,
+// rather than at the very end of the sequence.
+const GLYPH_RELEASE_MS = 280;
+
 export function SkillTreePage() {
+  // `activeCatId` is the currently-open category. `closingCatId` is a category
+  // that's playing its reverse animation but hasn't unmounted yet — it can be
+  // set independently of `activeCatId` so that switching A → B undraws A's
+  // line/leaves in parallel with B's open sequence.
   const [activeCatId, setActiveCatId] = useState<string | null>(null);
+  const [closingCatId, setClosingCatId] = useState<string | null>(null);
+  // Flips true GLYPH_RELEASE_MS into a close so the cat hex's scale and tint
+  // ease back to neutral partway through, while the ring continues fading and
+  // the line still has to undraw.
+  const [glyphReleased, setGlyphReleased] = useState(false);
   const [selectedLeafId, setSelectedLeafId] = useState<string | null>(null);
   const { goals, isGoal } = useGoals();
 
@@ -375,12 +437,25 @@ export function SkillTreePage() {
   const animRef = useRef<number | null>(null);
   const sizeRef = useRef<{ width: number; height: number }>({ width: 0, height: 0 });
   const lastFocusRef = useRef<number | null>(null);
+  const closeTimerRef = useRef<number | null>(null);
 
   const activeCat = useMemo(
     () =>
       SKILL_TREE.find((n) => n.id === activeCatId && !isLeaf(n)) as TreeBranch | undefined,
     [activeCatId],
   );
+
+  // Render groups: 0–2 categories whose lines + leaves should be on-screen.
+  // The active cat (open animation) plus, if currently switching/deselecting,
+  // the cat that's animating away (closing animation).
+  const renderGroups = useMemo(() => {
+    const groups: Array<{ catId: string; isClosing: boolean }> = [];
+    if (activeCatId) groups.push({ catId: activeCatId, isClosing: false });
+    if (closingCatId && closingCatId !== activeCatId) {
+      groups.push({ catId: closingCatId, isClosing: true });
+    }
+    return groups;
+  }, [activeCatId, closingCatId]);
 
   const selectedLeaf = useMemo((): TreeLeaf | null => {
     if (!selectedLeafId) return null;
@@ -510,6 +585,30 @@ export function SkillTreePage() {
     applyTarget(activeCatId == null ? null : idx, true);
   }, [activeCatId, applyTarget]);
 
+  // ── Cleanup pending close timer on unmount ─────────────────────────────────
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current !== null) {
+        clearTimeout(closeTimerRef.current);
+        closeTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  // ── Glyph release timer ────────────────────────────────────────────────────
+  // Whenever a new closingCatId is set, reset the flag and re-arm. If the
+  // closing cat changes (rapid switches) the cleanup tears down the prior
+  // timer so the new closing cat gets its own full GLYPH_RELEASE_MS window.
+  useEffect(() => {
+    if (closingCatId === null) {
+      setGlyphReleased(false);
+      return;
+    }
+    setGlyphReleased(false);
+    const t = window.setTimeout(() => setGlyphReleased(true), GLYPH_RELEASE_MS);
+    return () => clearTimeout(t);
+  }, [closingCatId]);
+
   // ── Drag pan (bounded) ─────────────────────────────────────────────────────
   const clampView = useCallback(
     (v: View): View => {
@@ -556,10 +655,50 @@ export function SkillTreePage() {
   };
 
   // ── Click handlers ─────────────────────────────────────────────────────────
+  // Deselects and switches both hand the outgoing category over to
+  // `closingCatId` so it can play its reverse animation, then unmount once
+  // CLOSE_SEQ_MS elapses. On a rapid follow-up click the timer is cleared and
+  // re-armed — closingCatId always tracks the most recently outgoing cat.
+  const armCloseTimer = useCallback(() => {
+    if (closeTimerRef.current !== null) {
+      clearTimeout(closeTimerRef.current);
+    }
+    closeTimerRef.current = window.setTimeout(() => {
+      setClosingCatId(null);
+      closeTimerRef.current = null;
+    }, CLOSE_SEQ_MS);
+  }, []);
+
   const onCatClick = (id: string | null) => {
     if (hasDragged.current) return;
-    setActiveCatId((prev) => (id === null ? null : prev === id ? null : id));
     setSelectedLeafId(null);
+
+    const deselecting = id === null || activeCatId === id;
+
+    if (deselecting) {
+      if (activeCatId === null) return;
+      setClosingCatId(activeCatId);
+      setActiveCatId(null);
+      applyTarget(null, true);
+      armCloseTimer();
+      return;
+    }
+
+    // Selecting a new category. If something was already open, hand it to
+    // the closing slot so it undraws in parallel with the new cat opening.
+    if (activeCatId !== null && activeCatId !== id) {
+      setClosingCatId(activeCatId);
+      armCloseTimer();
+    } else {
+      // Nothing was open — clear any stale closingCatId (shouldn't happen
+      // unless the user spam-clicks during a close timer).
+      if (closeTimerRef.current !== null) {
+        clearTimeout(closeTimerRef.current);
+        closeTimerRef.current = null;
+      }
+      setClosingCatId(null);
+    }
+    setActiveCatId(id);
   };
   const onLeafClick = (id: string) => {
     if (hasDragged.current) return;
@@ -717,51 +856,107 @@ export function SkillTreePage() {
                 )}
               </g>
 
-              {/* Center → categories (drawn under hexes, full center-to-center) */}
+              {/* Center → categories. The dashed base stays put; when a
+                  category becomes active we overlay a solid line that "draws"
+                  from center outward, so the visible boundary between dash
+                  and solid sweeps toward the glyph. A closing cat keeps its
+                  overlay mounted (with `.closing`) so the line can undraw. */}
               {SKILL_TREE.map((cat, i) => {
                 const [px, py] = catPos(i);
                 const isActive = cat.id === activeCatId;
-                const isInactive = activeCatId !== null && !isActive;
+                const isClosingThis = cat.id === closingCatId;
+                // While the close is in its first phase (glyph still
+                // selected) the dashed base keeps its brighter opacity so the
+                // undrawing solid reveals it cleanly. Once glyphReleased flips
+                // the closing cat dims in step with the hex shrink.
+                const isInactive =
+                  activeCatId !== null &&
+                  !isActive &&
+                  (!isClosingThis || glyphReleased);
                 const color = CATEGORY_COLORS[cat.id] ?? "#888";
+                // Trim both ends to the hex boundary so the line never sits
+                // under either glyph's translucent tint ring.
+                const theta = Math.atan2(py - CY, px - CX);
+                const ux = Math.cos(theta);
+                const uy = Math.sin(theta);
+                const startTrim = hexEdgeDistance(R_CENTER, theta);
+                const endTrim = hexEdgeDistance(R_CAT, theta);
+                const x1 = CX + ux * startTrim;
+                const y1 = CY + uy * startTrim;
+                const x2 = px - ux * endTrim;
+                const y2 = py - uy * endTrim;
+                const lineLen = Math.hypot(x2 - x1, y2 - y1);
                 return (
-                  <line
-                    key={`l-${cat.id}`}
-                    x1={CX}
-                    y1={CY}
-                    x2={px}
-                    y2={py}
-                    stroke={color}
-                    strokeWidth={isActive ? 2 : 1.5}
-                    strokeDasharray={isActive ? "0" : "4 6"}
-                    opacity={isInactive ? 0.18 : isActive ? 0.85 : 0.55}
-                    style={{
-                      transition:
-                        "opacity .2s, stroke-width .2s, stroke-dasharray .2s",
-                    }}
-                  />
+                  <Fragment key={`l-${cat.id}`}>
+                    <line
+                      x1={x1}
+                      y1={y1}
+                      x2={x2}
+                      y2={y2}
+                      stroke={color}
+                      strokeWidth={1.5}
+                      strokeDasharray="4 6"
+                      opacity={isInactive ? 0.18 : 0.55}
+                      style={{ transition: "opacity .25s" }}
+                    />
+                    {(isActive || isClosingThis) && (
+                      <line
+                        key={`active-${cat.id}`}
+                        className={`${styles.catLineDraw} ${isClosingThis ? styles.closing : ""}`}
+                        x1={x1}
+                        y1={y1}
+                        x2={x2}
+                        y2={y2}
+                        stroke={color}
+                        strokeWidth={2.25}
+                        strokeLinecap="round"
+                        style={{ "--line-len": lineLen } as React.CSSProperties}
+                      />
+                    )}
+                  </Fragment>
                 );
               })}
 
-              {/* Active category → leaves (drawn under hexes, full center-to-center) */}
-              {activeCat &&
-                (() => {
-                  const idx = SKILL_TREE.findIndex((c) => c.id === activeCatId);
-                  const [px, py] = catPos(idx);
-                  const positions = leafPositions(idx, activeCat.children.length);
-                  const color = CATEGORY_COLORS[activeCatId!] ?? "#888";
-                  return positions.map(([lx, ly], i) => (
+              {/* Category → leaves connector lines. Rendered for both the
+                  opening cat (drawing outward) and any closing cat (undrawing
+                  back to the parent), keyed by cat id so a switch persists
+                  the closing cat's element instances long enough to animate. */}
+              {renderGroups.map((g) => {
+                const branch = SKILL_TREE.find(
+                  (c) => c.id === g.catId && !isLeaf(c),
+                ) as TreeBranch | undefined;
+                if (!branch) return null;
+                const idx = SKILL_TREE.findIndex((c) => c.id === g.catId);
+                const [px, py] = catPos(idx);
+                const positions = leafPositions(idx, branch.children.length);
+                const color = CATEGORY_COLORS[g.catId] ?? "#888";
+                return positions.map(([lx, ly], i) => {
+                  const theta = Math.atan2(ly - py, lx - px);
+                  const ux = Math.cos(theta);
+                  const uy = Math.sin(theta);
+                  const startTrim = hexEdgeDistance(R_CAT, theta);
+                  const endTrim = hexEdgeDistance(R_LEAF, theta);
+                  const x1 = px + ux * startTrim;
+                  const y1 = py + uy * startTrim;
+                  const x2 = lx - ux * endTrim;
+                  const y2 = ly - uy * endTrim;
+                  const len = Math.hypot(x2 - x1, y2 - y1);
+                  return (
                     <line
-                      key={`ll-${activeCatId}-${i}`}
-                      x1={px}
-                      y1={py}
-                      x2={lx}
-                      y2={ly}
+                      key={`ll-${g.catId}-${i}`}
+                      className={`${styles.leafLineDraw} ${g.isClosing ? styles.closing : ""}`}
+                      x1={x1}
+                      y1={y1}
+                      x2={x2}
+                      y2={y2}
                       stroke={color}
                       strokeWidth="1.5"
-                      opacity="0.55"
+                      strokeLinecap="round"
+                      style={{ "--line-len": len } as React.CSSProperties}
                     />
-                  ));
-                })()}
+                  );
+                });
+              })}
 
               {/* Boulderer center */}
               <Boulderer cx={CX} cy={CY} r={R_CENTER} />
@@ -772,7 +967,13 @@ export function SkillTreePage() {
                 const branch = cat as TreeBranch;
                 const [px, py] = catPos(i);
                 const isActive = cat.id === activeCatId;
-                const isInactive = activeCatId !== null && !isActive;
+                const isClosingThis = cat.id === closingCatId;
+                // Closing cat joins the inactive group as soon as the glyph
+                // is released, so its dim fades in sync with the shrink.
+                const isInactive =
+                  activeCatId !== null &&
+                  !isActive &&
+                  (!isClosingThis || glyphReleased);
                 const goalsInCat = branch.children.filter(
                   (l) => isLeaf(l) && isGoal((l as TreeLeaf).id),
                 ).length;
@@ -780,6 +981,13 @@ export function SkillTreePage() {
                   goalsInCat > 0
                     ? `${branch.children.length} skills · ${goalsInCat} goal${goalsInCat === 1 ? "" : "s"}`
                     : `${branch.children.length} skills`;
+                // The ring stays mounted for the whole close (it has its own
+                // fade-out animation). The hex glyph itself releases earlier —
+                // at GLYPH_RELEASE_MS — so its scale + tint ease back to
+                // neutral right after the leaves collapse, instead of waiting
+                // for the line to finish undrawing.
+                const glyphSelected =
+                  isActive || (isClosingThis && !glyphReleased);
                 return (
                   <HexNode
                     key={cat.id}
@@ -791,39 +999,61 @@ export function SkillTreePage() {
                     iconId={cat.id}
                     label={cat.label}
                     sublabel={sub}
-                    selected={isActive}
+                    selected={glyphSelected}
+                    ringActive={isActive || isClosingThis}
                     inactive={isInactive}
                     onClick={() => onCatClick(cat.id)}
+                    ringAnimDelay={280}
+                    isClosing={isClosingThis}
                   />
                 );
               })}
 
-              {/* Active category — leaves */}
-              {activeCat &&
-                (() => {
-                  const idx = SKILL_TREE.findIndex((c) => c.id === activeCatId);
-                  const positions = leafPositions(idx, activeCat.children.length);
-                  return activeCat.children.map((leaf: TreeNode, i: number) => {
-                    if (!isLeaf(leaf)) return null;
-                    const tl = leaf as TreeLeaf;
-                    const [lx, ly] = positions[i];
-                    return (
+              {/* Leaf hexes. Each leaf is wrapped in a group whose CSS
+                  transform-origin is the parent category position, so the
+                  bloom appears to grow OUT of (or retract back into) the
+                  glyph. Closing-cat leaves are non-interactive while they
+                  animate away. */}
+              {renderGroups.map((g) => {
+                const branch = SKILL_TREE.find(
+                  (c) => c.id === g.catId && !isLeaf(c),
+                ) as TreeBranch | undefined;
+                if (!branch) return null;
+                const idx = SKILL_TREE.findIndex((c) => c.id === g.catId);
+                const [px, py] = catPos(idx);
+                const positions = leafPositions(idx, branch.children.length);
+                return branch.children.map((leaf: TreeNode, i: number) => {
+                  if (!isLeaf(leaf)) return null;
+                  const tl = leaf as TreeLeaf;
+                  const [lx, ly] = positions[i];
+                  return (
+                    <g
+                      key={`leaf-${g.catId}-${tl.id}`}
+                      className={`${styles.leafBloom} ${g.isClosing ? styles.closing : ""}`}
+                      style={
+                        {
+                          "--ox": `${px}px`,
+                          "--oy": `${py}px`,
+                          pointerEvents: g.isClosing ? "none" : undefined,
+                        } as React.CSSProperties
+                      }
+                    >
                       <HexNode
-                        key={tl.id}
                         kind="leaf"
                         cx={lx}
                         cy={ly}
                         r={R_LEAF}
-                        color={CATEGORY_COLORS[activeCatId!] ?? "#888"}
+                        color={CATEGORY_COLORS[g.catId] ?? "#888"}
                         initials={leafInitials(tl.label)}
                         label={tl.label}
-                        selected={tl.id === selectedLeafId}
+                        selected={!g.isClosing && tl.id === selectedLeafId}
                         isGoal={isGoal(tl.id)}
-                        onClick={() => onLeafClick(tl.id)}
+                        onClick={g.isClosing ? undefined : () => onLeafClick(tl.id)}
                       />
-                    );
-                  });
-                })()}
+                    </g>
+                  );
+                });
+              })}
               </g>
             </svg>
 
