@@ -1,8 +1,5 @@
 import type { Kind, TreeBranch, TreeLeaf, TreeNode } from "../types";
-
-function isLeaf(node: TreeNode): node is TreeLeaf {
-  return !("children" in node);
-}
+import { isLeaf } from "../utils/tree";
 
 export function getAllLeaves(tree: TreeNode[]): TreeLeaf[] {
   const out: TreeLeaf[] = [];

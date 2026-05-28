@@ -167,7 +167,7 @@ describe("SchedulePage", () => {
       const addButtons = screen.getAllByText("Add activity");
       await user.click(addButtons[0]);
 
-      await user.click(screen.getByRole("button", { name: /^climb$/i }));
+      await user.click(screen.getByRole("button", { name: /^climbing session$/i }));
       await user.click(screen.getByRole("button", { name: /^technique$/i }));
       await user.click(screen.getByRole("button", { name: /^foot placement$/i }));
       await user.click(screen.getByTestId("duration-option-90"));

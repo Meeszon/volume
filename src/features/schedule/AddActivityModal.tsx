@@ -21,7 +21,7 @@ interface AddActivityModalProps {
   onAdd: (input: AddActivityInput) => void;
 }
 
-const KIND_ORDER: Kind[] = ["climb", "warmup", "train"];
+const KIND_ORDER: Kind[] = ["warmup", "climb", "train"];
 
 const KIND_TRAIL: Record<Kind, string[]> = {
   climb: ["Intent", "Duration"],
@@ -171,9 +171,9 @@ export function AddActivityModal({
           embedded
           dayLabel={dayLabel}
           kind="train"
-          title="Add Train · Block"
+          title="Add Training Block · Block"
           subTitle={trainLeaf.label}
-          blocks={[]}
+          blocks={trainLeaf.blocks ?? []}
           onSelect={setPickedBlock}
           onBack={() => setTrainLeaf(null)}
           backLabel="Back to intent"

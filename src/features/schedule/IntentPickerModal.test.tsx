@@ -44,7 +44,7 @@ describe("IntentPickerModal", () => {
   describe("header", () => {
     it("shows the Kind-aware title and the day label", () => {
       renderPicker({ kind: "climb" });
-      expect(screen.getByText(/add climb · intent/i)).toBeTruthy();
+      expect(screen.getByText(/add climbing session · intent/i)).toBeTruthy();
       expect(screen.getByText(/monday 28 apr/i)).toBeTruthy();
     });
 
@@ -96,14 +96,15 @@ describe("IntentPickerModal", () => {
   });
 
   describe("All tab — drill-down", () => {
-    it("shows the 5 top-level categories on entry", () => {
+    it("shows the climb-relevant categories on entry", () => {
       renderPicker({ kind: "climb" });
-      // Categories visible: Technique, Mobility, Mental, Longevity, Strength
+      // For climb kind: Mobility and Longevity have no climb-allowed leaves, so
+      // they're filtered out. Only Technique, Mental, Strength remain.
       expect(screen.getByRole("button", { name: /^technique$/i })).toBeTruthy();
-      expect(screen.getByRole("button", { name: /^mobility$/i })).toBeTruthy();
       expect(screen.getByRole("button", { name: /^mental$/i })).toBeTruthy();
-      expect(screen.getByRole("button", { name: /^longevity$/i })).toBeTruthy();
       expect(screen.getByRole("button", { name: /^strength$/i })).toBeTruthy();
+      expect(screen.queryByRole("button", { name: /^mobility$/i })).toBeNull();
+      expect(screen.queryByRole("button", { name: /^longevity$/i })).toBeNull();
     });
 
     it("does NOT show leaves before drilling", () => {
@@ -119,7 +120,7 @@ describe("IntentPickerModal", () => {
       expect(screen.getByRole("button", { name: /^foot placement$/i })).toBeTruthy();
       expect(screen.getByRole("button", { name: /^hooking$/i })).toBeTruthy();
       expect(screen.getByRole("button", { name: /^dynamic movement$/i })).toBeTruthy();
-      expect(screen.getByRole("button", { name: /^hold application$/i })).toBeTruthy();
+      expect(screen.getByRole("button", { name: /^coordination$/i })).toBeTruthy();
 
       // Categories no longer visible (only the drilled-into label remains)
       expect(screen.queryByRole("button", { name: /^mobility$/i })).toBeNull();
@@ -141,14 +142,14 @@ describe("IntentPickerModal", () => {
       const { user } = renderPicker({ kind: "train" });
       await user.click(screen.getByRole("button", { name: /^strength$/i }));
       // Train-allowed strength leaves
-      expect(screen.getByRole("button", { name: /max finger strength/i })).toBeTruthy();
+      expect(screen.getByRole("button", { name: /^finger strength$/i })).toBeTruthy();
     });
 
     it("excludes Climb-only leaves when Kind = Train", async () => {
       const { user } = renderPicker({ kind: "train" });
-      await user.click(screen.getByRole("button", { name: /^technique$/i }));
-      // Foot Placement is climb-only — must NOT appear under Train
-      expect(screen.queryByRole("button", { name: /^foot placement$/i })).toBeNull();
+      await user.click(screen.getByRole("button", { name: /^strength$/i }));
+      // Compression is climb-only — must NOT appear under Train
+      expect(screen.queryByRole("button", { name: /^compression$/i })).toBeNull();
     });
 
     it("clicking a leaf invokes onSelect", async () => {
@@ -199,7 +200,7 @@ describe("IntentPickerModal", () => {
       await user.click(screen.getByRole("tab", { name: /recents/i }));
       const buttons = screen.getAllByRole("button");
       const labels = buttons.map((b) => b.textContent ?? "");
-      const fsIdx = labels.findIndex((l) => l.includes("Max Finger Strength"));
+      const fsIdx = labels.findIndex((l) => l.includes("Finger Strength"));
       const fwIdx = labels.findIndex((l) => l.includes("Foot Placement"));
       expect(fsIdx).toBeGreaterThan(-1);
       expect(fwIdx).toBeGreaterThan(-1);

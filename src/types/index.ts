@@ -13,6 +13,7 @@ export interface TreeLeaf {
   label: string;
   description?: string;
   allowedKinds: Kind[];
+  blocks?: Block[];
 }
 
 export type TreeNode = TreeBranch | TreeLeaf;

@@ -83,7 +83,7 @@ describe("ActivityCard", () => {
         ],
       },
     });
-    expect(screen.getByTestId("eyebrow-chip").textContent).toBe("Max Finger Strength");
+    expect(screen.getByTestId("eyebrow-chip").textContent).toBe("Finger Strength");
     expect(screen.getByText("Max Hangs")).toBeTruthy();
   });
 

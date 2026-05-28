@@ -40,7 +40,7 @@ export function DurationPickerModal({
         <div className={frameStyles.modalHeaderLeft}>
           <span className={frameStyles.eyebrow}>{dayLabel}</span>
           <h1 className={frameStyles.modalTitle}>
-            Add Climb · Duration
+            Add Climbing Session · Duration
           </h1>
         </div>
         <button

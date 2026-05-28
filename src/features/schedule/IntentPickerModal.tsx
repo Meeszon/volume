@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import type { CSSProperties } from "react";
 import { CATEGORY_COLORS, SKILL_TREE } from "../../data/skillTree";
-import { getIconFor } from "../../data/iconMap";
+import { getIconFor, getIconForLeaf } from "../../data/iconMap";
 import { isLeaf } from "../../utils/tree";
 import {
   getGoalIntentsForKind,
@@ -58,6 +58,16 @@ export function IntentPickerModal({
   const categories = useMemo(
     () => SKILL_TREE.filter((n): n is TreeBranch => !isLeaf(n)),
     [],
+  );
+
+  const visibleCategories = useMemo(
+    () =>
+      categories.filter((cat) =>
+        getAllLeaves(cat.children).some((l) =>
+          l.allowedKinds.includes(kind),
+        ),
+      ),
+    [categories, kind],
   );
 
   const goalLeaves = useMemo(
@@ -119,7 +129,7 @@ export function IntentPickerModal({
                     <HexGlyph
                       size={HEX_SIZE}
                       color={CATEGORY_COLORS[drillCategory.id] ?? "#888"}
-                      icon={getIconFor(leaf.id)}
+                      icon={getIconForLeaf(leaf.id)}
                       label={leaf.label}
                       onClick={() => handleSelect(leaf.id)}
                     />
@@ -131,10 +141,17 @@ export function IntentPickerModal({
         </>
       );
     }
+    if (visibleCategories.length === 0) {
+      return (
+        <div className={styles.emptyState}>
+          No intents available for {KIND_CONFIG[kind].label}.
+        </div>
+      );
+    }
     return (
       <div className={styles.coordinateRow}>
         <div className={styles.row}>
-          {categories.map((cat) => (
+          {visibleCategories.map((cat) => (
             <div className={styles.coordCell} key={cat.id}>
               <HexGlyph
                 size={CATEGORY_HEX_SIZE}
@@ -171,7 +188,7 @@ export function IntentPickerModal({
               <HexGlyph
                 size={HEX_SIZE}
                 color={colorForLeaf(leaf.id)}
-                icon={getIconFor(leaf.id)}
+                icon={getIconForLeaf(leaf.id)}
                 label={leaf.label}
                 onClick={() => handleSelect(leaf.id)}
               />
@@ -202,7 +219,7 @@ export function IntentPickerModal({
                 <HexGlyph
                   size={HEX_SIZE}
                   color={color}
-                  icon={getIconFor(leaf.id)}
+                  icon={getIconForLeaf(leaf.id)}
                   label={leaf.label}
                   onClick={() => handleSelect(leaf.id)}
                 />

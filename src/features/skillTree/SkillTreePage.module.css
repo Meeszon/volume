@@ -335,25 +335,35 @@
   opacity: 0.5;
 }
 
-/* ───────── Goal tag (SVG inner) ───────── */
+/* ───────── Goal mark ─────────
+   A category-tinted Goal glyph planted just outside the hex at the growing
+   tip of the branch. The plant animation scales it in so newly-set goals
+   snap into place with a small beat rather than fading. */
 
-.goalTag rect {
-  fill: #f7f3e6;
-  stroke: rgba(26, 24, 20, 0.45);
-  stroke-width: 0.75;
+@keyframes goalTagPlant {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
-.goalTag line {
-  stroke: rgba(26, 24, 20, 0.4);
-  stroke-width: 0.75;
+.goalTag {
+  /* Direction varies per leaf, so the plant animation scales from the
+     icon's own centre rather than tracking a fixed anchor. */
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: goalTagPlant 340ms cubic-bezier(0.22, 1.25, 0.4, 1) both;
 }
 
-.goalTag text {
-  font-family: var(--font-mono);
-  font-size: 7.5px;
-  font-weight: 600;
-  letter-spacing: 0.18em;
-  fill: var(--ink);
+.swatchGoal .swatchDot {
+  /* Cream fill + dark border stands in for the paper tag itself, skipping
+     the category tint other swatches use. */
+  border-color: var(--ink);
+  background: #ece1c9;
 }
 
 /* ───────── Toast ───────── */

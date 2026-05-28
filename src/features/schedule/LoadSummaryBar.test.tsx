@@ -67,7 +67,7 @@ describe("LoadSummaryBar", () => {
     renderBar(activities, goals);
 
     expect(screen.getByText("Foot Placement")).toBeTruthy();
-    expect(screen.getByText("Max Finger Strength")).toBeTruthy();
+    expect(screen.getByText("Finger Strength")).toBeTruthy();
     expect(
       screen.getByTestId("goal-row-foot-placement").getAttribute("data-covered"),
     ).toBe("true");
