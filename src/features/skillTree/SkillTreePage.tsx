@@ -545,6 +545,7 @@ export function SkillTreePage() {
   const lastFocusRef = useRef<Focus>({ kind: "all" });
   const closeTimerRef = useRef<number | null>(null);
   const subcatCloseTimerRef = useRef<number | null>(null);
+  const glyphReleaseTimerRef = useRef<number | null>(null);
 
   const activeCat = activeCatId ? BRANCH_INDEX[activeCatId]?.branch ?? null : null;
   const activeSubcat = activeSubcatId
@@ -775,19 +776,13 @@ export function SkillTreePage() {
         clearTimeout(subcatCloseTimerRef.current);
         subcatCloseTimerRef.current = null;
       }
+      if (glyphReleaseTimerRef.current !== null) {
+        clearTimeout(glyphReleaseTimerRef.current);
+        glyphReleaseTimerRef.current = null;
+      }
       cancelAnim();
     };
   }, [cancelAnim]);
-
-  useEffect(() => {
-    if (closingCatId === null) {
-      setGlyphReleased(false);
-      return;
-    }
-    setGlyphReleased(false);
-    const t = window.setTimeout(() => setGlyphReleased(true), GLYPH_RELEASE_MS);
-    return () => clearTimeout(t);
-  }, [closingCatId]);
 
   const clampView = useCallback(
     (v: View): View => {
@@ -851,6 +846,25 @@ export function SkillTreePage() {
     [],
   );
 
+  const armGlyphRelease = useCallback(() => {
+    if (glyphReleaseTimerRef.current !== null) {
+      clearTimeout(glyphReleaseTimerRef.current);
+    }
+    setGlyphReleased(false);
+    glyphReleaseTimerRef.current = window.setTimeout(() => {
+      setGlyphReleased(true);
+      glyphReleaseTimerRef.current = null;
+    }, GLYPH_RELEASE_MS);
+  }, []);
+
+  const cancelGlyphRelease = useCallback(() => {
+    if (glyphReleaseTimerRef.current !== null) {
+      clearTimeout(glyphReleaseTimerRef.current);
+      glyphReleaseTimerRef.current = null;
+    }
+    setGlyphReleased(false);
+  }, []);
+
   const handoffActiveSubcat = useCallback(() => {
     if (activeSubcatId === null) return;
     setClosingSubcatId(activeSubcatId);
@@ -867,9 +881,13 @@ export function SkillTreePage() {
     if (deselecting) {
       if (activeCatId === null) return;
       setClosingCatId(activeCatId);
+      armGlyphRelease();
       setActiveCatId(null);
       handoffActiveSubcat();
-      armCloseTimer(closeTimerRef, () => setClosingCatId(null));
+      armCloseTimer(closeTimerRef, () => {
+        setClosingCatId(null);
+        cancelGlyphRelease();
+      });
       return;
     }
 
@@ -877,14 +895,19 @@ export function SkillTreePage() {
       // Hand the outgoing cat to the closing slot so its line/leaves
       // undraw in parallel with the new cat opening.
       setClosingCatId(activeCatId);
+      armGlyphRelease();
       handoffActiveSubcat();
-      armCloseTimer(closeTimerRef, () => setClosingCatId(null));
+      armCloseTimer(closeTimerRef, () => {
+        setClosingCatId(null);
+        cancelGlyphRelease();
+      });
     } else {
       if (closeTimerRef.current !== null) {
         clearTimeout(closeTimerRef.current);
         closeTimerRef.current = null;
       }
       setClosingCatId(null);
+      cancelGlyphRelease();
     }
     setActiveCatId(id);
   };

@@ -1,7 +1,7 @@
 import {
   SportShoe, Dumbbell, ShieldPlus, Target, PersonStanding,
   BicepsFlexed, HandFist, Footprints, Scale, Eye, Brain,
-  Zap,
+  Zap, Mountain,
   type LucideIcon,
 } from "lucide-react";
 import { SKILL_TREE } from "./skillTree";
@@ -22,7 +22,7 @@ export const ICON_MAP: Record<string, LucideIcon> = {
   "fingers": HandFist,
   "upper-body": BicepsFlexed,
   // Synthetic intent
-  "just-climbing": Zap,
+  "just-climbing": Mountain,
 };
 
 export function getIconFor(id: string): LucideIcon {
