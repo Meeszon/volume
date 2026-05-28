@@ -82,8 +82,13 @@ editable per-Activity; the Block defaults are the starting point.
 ## Skill Tree
 
 A hierarchical taxonomy of training intents: 5 top-level Categories, each
-with Branches and Leaves. The single source of truth for what Intent values
-exist. Each Leaf carries:
+containing Leaves directly or — when a category warrants further grouping —
+intermediate **Branches** that themselves contain Leaves. Max depth is 3
+(Category → Branch → Leaf); most categories will only be 2-deep
+(Category → Leaf). Branches are organizational only — they are **not**
+goal-settable. Only Leaves are valid Intent / Goal identifiers. The Skill
+Tree is the single source of truth for what Intent values exist. Each Leaf
+carries:
 
 - `allowedKinds: ("climb" | "train")[]` — which Activity Kinds this leaf can
   be picked on.

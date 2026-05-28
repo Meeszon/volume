@@ -11,10 +11,10 @@ describe("getActivityCategoryColor", () => {
     const activity: Activity = {
       ...base,
       kind: "train",
-      intentLeafId: "finger-strength",
+      intentLeafId: "max-finger-strength",
     };
     expect(getActivityCategoryColor(activity)).toBe(
-      CATEGORY_COLORS["physical-strength"],
+      CATEGORY_COLORS["strength"],
     );
   });
 
@@ -22,7 +22,7 @@ describe("getActivityCategoryColor", () => {
     const activity: Activity = {
       ...base,
       kind: "climb",
-      intentLeafId: "footwork",
+      intentLeafId: "foot-placement",
     };
     expect(getActivityCategoryColor(activity)).toBe(
       CATEGORY_COLORS["technique"],

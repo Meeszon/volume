@@ -1,14 +1,14 @@
 import { useState, useMemo } from "react";
 import type { CSSProperties } from "react";
 import { CATEGORY_COLORS, SKILL_TREE } from "../../data/skillTree";
-import { getIconFor } from "../../data/iconMap";
+import { getIconFor, getIconForLeaf } from "../../data/iconMap";
 import { isLeaf } from "../../utils/tree";
 import {
   getGoalIntentsForKind,
   getRecentIntentsForKind,
   getSyntheticJustClimbing,
 } from "../../lib/intentResolver";
-import { getLeafCategory } from "../../lib/skillTreeLookup";
+import { getAllLeaves, getLeafCategory } from "../../lib/skillTreeLookup";
 import { useGoals } from "../../contexts/useGoals";
 import { HexGlyph } from "../../components/HexGlyph/HexGlyph";
 import { KIND_CONFIG } from "../../data/kindConfig";
@@ -60,6 +60,16 @@ export function IntentPickerModal({
     [],
   );
 
+  const visibleCategories = useMemo(
+    () =>
+      categories.filter((cat) =>
+        getAllLeaves(cat.children).some((l) =>
+          l.allowedKinds.includes(kind),
+        ),
+      ),
+    [categories, kind],
+  );
+
   const goalLeaves = useMemo(
     () => getGoalIntentsForKind(kind, goals, SKILL_TREE),
     [kind, goals],
@@ -80,8 +90,8 @@ export function IntentPickerModal({
 
   const drillLeaves = useMemo<TreeLeaf[]>(() => {
     if (!drillCategory) return [];
-    return drillCategory.children.filter(
-      (n): n is TreeLeaf => isLeaf(n) && n.allowedKinds.includes(kind),
+    return getAllLeaves(drillCategory.children).filter((l) =>
+      l.allowedKinds.includes(kind),
     );
   }, [drillCategory, kind]);
 
@@ -119,7 +129,7 @@ export function IntentPickerModal({
                     <HexGlyph
                       size={HEX_SIZE}
                       color={CATEGORY_COLORS[drillCategory.id] ?? "#888"}
-                      icon={getIconFor(leaf.id)}
+                      icon={getIconForLeaf(leaf.id)}
                       label={leaf.label}
                       onClick={() => handleSelect(leaf.id)}
                     />
@@ -131,10 +141,17 @@ export function IntentPickerModal({
         </>
       );
     }
+    if (visibleCategories.length === 0) {
+      return (
+        <div className={styles.emptyState}>
+          No intents available for {KIND_CONFIG[kind].label}.
+        </div>
+      );
+    }
     return (
       <div className={styles.coordinateRow}>
         <div className={styles.row}>
-          {categories.map((cat) => (
+          {visibleCategories.map((cat) => (
             <div className={styles.coordCell} key={cat.id}>
               <HexGlyph
                 size={CATEGORY_HEX_SIZE}
@@ -171,7 +188,7 @@ export function IntentPickerModal({
               <HexGlyph
                 size={HEX_SIZE}
                 color={colorForLeaf(leaf.id)}
-                icon={getIconFor(leaf.id)}
+                icon={getIconForLeaf(leaf.id)}
                 label={leaf.label}
                 onClick={() => handleSelect(leaf.id)}
               />
@@ -202,7 +219,7 @@ export function IntentPickerModal({
                 <HexGlyph
                   size={HEX_SIZE}
                   color={color}
-                  icon={getIconFor(leaf.id)}
+                  icon={getIconForLeaf(leaf.id)}
                   label={leaf.label}
                   onClick={() => handleSelect(leaf.id)}
                 />

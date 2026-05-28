@@ -1,6 +1,8 @@
 import { useState, useCallback } from "react";
 import type { Goal } from "../types";
 import { GoalsContext } from "./useGoals";
+import { SKILL_TREE } from "../data/skillTree";
+import { findLeaf } from "../lib/skillTreeLookup";
 
 const STORAGE_KEY = "volume:goals";
 const MAX_GOALS = 5;
@@ -11,9 +13,15 @@ function loadGoals(): Goal[] {
     if (!stored) return [];
     const parsed = JSON.parse(stored);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(
-      (g): g is Goal => g && typeof g === "object" && typeof g.leafId === "string",
+    const valid = parsed.filter(
+      (g): g is Goal =>
+        g &&
+        typeof g === "object" &&
+        typeof g.leafId === "string" &&
+        findLeaf(SKILL_TREE, g.leafId) !== null,
     );
+    if (valid.length !== parsed.length) persist(valid);
+    return valid;
   } catch {
     return [];
   }

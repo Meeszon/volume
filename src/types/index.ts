@@ -1,8 +1,3 @@
-export interface Exercise {
-  name: string;
-  detail: string;
-}
-
 // Activity Kind — replaces the old 4-value ActivityType
 export type Kind = "climb" | "warmup" | "train";
 
@@ -17,7 +12,6 @@ export interface TreeLeaf {
   id: string;
   label: string;
   description?: string;
-  exercises: Exercise[];
   allowedKinds: Kind[];
   blocks?: Block[];
 }

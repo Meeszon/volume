@@ -38,9 +38,9 @@ describe("AddActivityModal", () => {
 
     it("all three Kinds are enabled", () => {
       renderModal();
-      const climb = screen.getByRole("button", { name: /^climb$/i });
+      const climb = screen.getByRole("button", { name: /^climbing session$/i });
       const warmup = screen.getByRole("button", { name: /^warmup$/i });
-      const train = screen.getByRole("button", { name: /^train$/i });
+      const train = screen.getByRole("button", { name: /^training block$/i });
       expect(climb.getAttribute("aria-disabled")).not.toBe("true");
       expect(warmup.getAttribute("aria-disabled")).not.toBe("true");
       expect(train.getAttribute("aria-disabled")).not.toBe("true");
@@ -51,7 +51,7 @@ describe("AddActivityModal", () => {
     async function gotoClimbIntent() {
       const user = userEvent.setup();
       renderModal();
-      await user.click(screen.getByRole("button", { name: /^climb$/i }));
+      await user.click(screen.getByRole("button", { name: /^climbing session$/i }));
       return user;
     }
 
@@ -60,14 +60,14 @@ describe("AddActivityModal", () => {
       expect(screen.getByRole("tab", { name: /all/i })).toBeTruthy();
       expect(screen.getByRole("tab", { name: /goals/i })).toBeTruthy();
       expect(screen.getByRole("tab", { name: /recents/i })).toBeTruthy();
-      expect(screen.getByText(/add climb · intent/i)).toBeTruthy();
+      expect(screen.getByText(/add climbing session · intent/i)).toBeTruthy();
     });
 
     it("Just Climbing is reachable; after duration pick onAdd carries the synthetic leaf id and the chosen duration", async () => {
       const user = await gotoClimbIntent();
       await user.click(screen.getByRole("button", { name: /just climbing/i }));
       // Now on the duration picker
-      expect(screen.getByText(/add climb · duration/i)).toBeTruthy();
+      expect(screen.getByText(/add climbing session · duration/i)).toBeTruthy();
       await user.click(screen.getByTestId("duration-option-60"));
       expect(onAdd).toHaveBeenCalledWith({
         kind: "climb",
@@ -81,14 +81,14 @@ describe("AddActivityModal", () => {
     it("drilling into a category and picking a leaf advances to the duration picker, then submits with the leaf id + duration", async () => {
       const user = await gotoClimbIntent();
       await user.click(screen.getByRole("button", { name: /^technique$/i }));
-      await user.click(screen.getByRole("button", { name: /^footwork$/i }));
-      expect(screen.getByText(/add climb · duration/i)).toBeTruthy();
+      await user.click(screen.getByRole("button", { name: /^foot placement$/i }));
+      expect(screen.getByText(/add climbing session · duration/i)).toBeTruthy();
       // Picked intent shows as the duration picker's subtitle
-      expect(screen.getByText("Footwork")).toBeTruthy();
+      expect(screen.getByText("Foot Placement")).toBeTruthy();
       await user.click(screen.getByTestId("duration-option-150"));
       expect(onAdd).toHaveBeenCalledWith({
         kind: "climb",
-        intentLeafId: "footwork",
+        intentLeafId: "foot-placement",
         block: null,
         durationMinutes: 150,
       });
@@ -98,19 +98,19 @@ describe("AddActivityModal", () => {
     it("the duration picker Back button returns to the IntentPickerModal", async () => {
       const user = await gotoClimbIntent();
       await user.click(screen.getByRole("button", { name: /^technique$/i }));
-      await user.click(screen.getByRole("button", { name: /^footwork$/i }));
+      await user.click(screen.getByRole("button", { name: /^foot placement$/i }));
       await user.click(screen.getByRole("button", { name: /back to intent/i }));
-      expect(screen.getByText(/add climb · intent/i)).toBeTruthy();
+      expect(screen.getByText(/add climbing session · intent/i)).toBeTruthy();
       expect(onAdd).not.toHaveBeenCalled();
     });
 
     it("recording the pick updates the volume:recentIntents localStorage entry (at intent selection, before duration)", async () => {
       const user = await gotoClimbIntent();
       await user.click(screen.getByRole("button", { name: /^technique$/i }));
-      await user.click(screen.getByRole("button", { name: /^footwork$/i }));
+      await user.click(screen.getByRole("button", { name: /^foot placement$/i }));
       const stored = localStorage.getItem("volume:recentIntents");
       expect(stored).not.toBeNull();
-      expect(JSON.parse(stored as string)).toContain("footwork");
+      expect(JSON.parse(stored as string)).toContain("foot-placement");
     });
   });
 
@@ -177,33 +177,34 @@ describe("AddActivityModal", () => {
     async function gotoTrainIntent() {
       const user = userEvent.setup();
       renderModal();
-      await user.click(screen.getByRole("button", { name: /^train$/i }));
+      await user.click(screen.getByRole("button", { name: /^training block$/i }));
       return user;
     }
 
     it("Train opens the IntentPickerModal with kind=train (no Just-Climbing pin)", async () => {
       await gotoTrainIntent();
-      expect(screen.getByText(/add train · intent/i)).toBeTruthy();
+      expect(screen.getByText(/add training block · intent/i)).toBeTruthy();
       expect(screen.queryByRole("button", { name: /just climbing/i })).toBeNull();
     });
 
     it("only Train-allowed leaves are reachable", async () => {
       const user = await gotoTrainIntent();
       await user.click(screen.getByRole("button", { name: /^strength$/i }));
-      // Antagonist Training is train-only — appears for Train kind
-      expect(screen.getByRole("button", { name: /antagonist training/i })).toBeTruthy();
-      // Core Tension is both — also appears
+      // Finger Strength (id: max-finger-strength) is climb+train — appears for Train kind
+      expect(screen.getByRole("button", { name: /^finger strength$/i })).toBeTruthy();
+      // Core Tension is climb+train — also appears
       expect(screen.getByRole("button", { name: /core tension/i })).toBeTruthy();
+      // Compression Strength is climb-only — must NOT appear under Train
+      expect(screen.queryByRole("button", { name: /compression strength/i })).toBeNull();
     });
 
-    it("picking a Train leaf advances to the BlockPicker", async () => {
+    it("picking a Train leaf advances to the BlockPicker listing that leaf's blocks", async () => {
       const user = await gotoTrainIntent();
       await user.click(screen.getByRole("button", { name: /^strength$/i }));
       await user.click(screen.getByRole("button", { name: /^finger strength$/i }));
-      expect(screen.getByText(/add train · block/i)).toBeTruthy();
-      // Finger Strength has multiple blocks
-      expect(screen.getByRole("button", { name: /hangboard repeaters/i })).toBeTruthy();
+      expect(screen.getByText(/add training block · block/i)).toBeTruthy();
       expect(screen.getByRole("button", { name: /max hangs/i })).toBeTruthy();
+      expect(screen.getByRole("button", { name: /minimum edge/i })).toBeTruthy();
     });
 
     it("picking a Block advances to the BlockEditor", async () => {
@@ -211,7 +212,7 @@ describe("AddActivityModal", () => {
       await user.click(screen.getByRole("button", { name: /^strength$/i }));
       await user.click(screen.getByRole("button", { name: /^finger strength$/i }));
       await user.click(screen.getByRole("button", { name: /max hangs/i }));
-      expect(screen.getByText(/add train · max hangs/i)).toBeTruthy();
+      expect(screen.getByText(/add training block · max hangs/i)).toBeTruthy();
       expect(screen.getByRole("button", { name: /add activity/i })).toBeTruthy();
     });
 
@@ -221,14 +222,19 @@ describe("AddActivityModal", () => {
       await user.click(screen.getByRole("button", { name: /^finger strength$/i }));
       await user.click(screen.getByRole("button", { name: /max hangs/i }));
 
+      const setsInputs = screen.getAllByLabelText(/sets/i);
+      await user.clear(setsInputs[0]);
+      await user.type(setsInputs[0], "6");
+
       await user.click(screen.getByRole("button", { name: /add activity/i }));
 
       expect(onAdd).toHaveBeenCalledTimes(1);
       const call = (onAdd as unknown as ReturnType<typeof vi.fn>).mock.calls[0][0];
       expect(call.kind).toBe("train");
-      expect(call.intentLeafId).toBe("finger-strength");
+      expect(call.intentLeafId).toBe("max-finger-strength");
       expect(call.block).not.toBeNull();
-      expect(call.block.name).toBe("Max Hangs");
+      expect(call.block.name).toMatch(/max hangs/i);
+      expect(call.block.exercises[0].sets).toBe(6);
       expect(onClose).toHaveBeenCalled();
     });
 
@@ -237,7 +243,7 @@ describe("AddActivityModal", () => {
       await user.click(screen.getByRole("button", { name: /^strength$/i }));
       await user.click(screen.getByRole("button", { name: /^finger strength$/i }));
       await user.click(screen.getByRole("button", { name: /back to intent/i }));
-      expect(screen.getByText(/add train · intent/i)).toBeTruthy();
+      expect(screen.getByText(/add training block · intent/i)).toBeTruthy();
     });
 
     it("BlockEditor Back returns to the BlockPicker", async () => {
@@ -246,7 +252,8 @@ describe("AddActivityModal", () => {
       await user.click(screen.getByRole("button", { name: /^finger strength$/i }));
       await user.click(screen.getByRole("button", { name: /max hangs/i }));
       await user.click(screen.getByRole("button", { name: /^back$/i }));
-      expect(screen.getByText(/add train · block/i)).toBeTruthy();
+      expect(screen.getByText(/add training block · block/i)).toBeTruthy();
+      expect(screen.getByRole("button", { name: /minimum edge/i })).toBeTruthy();
     });
 
     it("records the picked Train intent in volume:recentIntents", async () => {
@@ -255,7 +262,7 @@ describe("AddActivityModal", () => {
       await user.click(screen.getByRole("button", { name: /^finger strength$/i }));
       const stored = localStorage.getItem("volume:recentIntents");
       expect(stored).not.toBeNull();
-      expect(JSON.parse(stored as string)).toContain("finger-strength");
+      expect(JSON.parse(stored as string)).toContain("max-finger-strength");
     });
   });
 

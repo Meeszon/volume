@@ -1,144 +1,590 @@
-/* ── Page layout ── */
+/* ───────── Page shell ───────── */
 
 .page {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  overflow: hidden;
-}
-
-/* ── Header ── */
-
-.header {
-  display: flex;
-  align-items: center;
-  padding: 0 20px;
-  height: 48px;
-  border-bottom: 1px solid #e4e4e4;
-  flex-shrink: 0;
-}
-
-.headerTitle {
-  font-size: 14px;
-  font-weight: 600;
-  color: #413f39;
-  letter-spacing: 0.02em;
-}
-
-/* ── Goals Dashboard (shared with GoalsDashboard component) ── */
-
-.dashboard {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 20px;
-  border-bottom: 1px solid #e4e4e4;
-  flex-shrink: 0;
-  min-height: 44px;
-}
-
-.dashboardLabel {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #9d9c99;
-  flex-shrink: 0;
-}
-
-.badgeList {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.badge {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 6px 3px 10px;
-  background: #f0f0f0;
-  border: 1px solid #dcdcdc;
-  border-radius: 20px;
-  font-size: 12px;
-}
-
-.badgeLabel {
-  color: #413f39;
-  font-weight: 500;
-}
-
-.badgeRemove {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 14px;
-  color: #9d9c99;
-  padding: 0;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-}
-
-.badgeRemove:hover {
-  color: #413f39;
-}
-
-.noGoals {
-  font-size: 12px;
-  color: #bbb;
-  font-style: italic;
-}
-
-/* ── Tree canvas ── */
-
-.treeCanvas {
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  position: relative;
-  cursor: grab;
 }
 
-.treeCanvas:active {
-  cursor: grabbing;
+/* ───────── Header ───────── */
+
+.header {
+  flex-shrink: 0;
+  border-bottom: 1px dashed rgba(26, 24, 20, 0.16);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 22px;
 }
 
-/* ── Zoom controls ── */
+.headerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
 
-.zoomControls {
-  position: absolute;
-  bottom: 14px;
-  right: 14px;
+.topLeft {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  z-index: 10;
-  background: #fff;
-  padding: 5px;
-  border-radius: 10px;
-  border: 1px solid #dcdcdc;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+  min-width: 0;
 }
 
-.zoomBtn {
-  width: 30px;
-  height: 30px;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  cursor: pointer;
-  font-size: 17px;
+.bigTitle {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 28px;
+  letter-spacing: -0.015em;
   line-height: 1;
-  color: #413f39;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.subtitle {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-3);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.viewPicker {
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-family: inherit;
+  background: var(--chalk);
+  border: 1px solid rgba(26, 24, 20, 0.14);
+  border-radius: 999px;
+  height: 30px;
+  overflow: hidden;
+  color: var(--ink-2);
 }
 
-.zoomBtn:hover {
-  background: #f5f5f4;
-  color: #111;
+.viewPicker button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+  padding: 0 14px;
+  border: none;
+  background: transparent;
+  color: var(--ink-3);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.viewPicker .viewPickerActive {
+  color: var(--ink);
+  background: rgba(26, 24, 20, 0.05);
+}
+
+.viewPickerDivider {
+  width: 1px;
+  height: 16px;
+  background: rgba(26, 24, 20, 0.12);
+}
+
+/* ───────── Goal coverage bar ───────── */
+
+.gBar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 22px;
+  border-bottom: 1px dashed rgba(26, 24, 20, 0.16);
+}
+
+.gBarTitle {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 9px;
+  padding-right: 14px;
+  border-right: 1px dashed rgba(26, 24, 20, 0.16);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.gBarTally {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 1px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: rgba(26, 24, 20, 0.05);
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.gBarTallySlash {
+  opacity: 0.55;
+  margin: 0 1px;
+}
+
+.gBarChips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  flex: 1;
+  min-width: 0;
+}
+
+.gChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 28px;
+  padding: 0 10px 0 8px;
+  border-radius: 999px;
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  font-family: inherit;
+  color: inherit;
+}
+
+.gChip:hover {
+  background: rgba(26, 24, 20, 0.04);
+}
+
+.gChipSelected {
+  background: rgba(26, 24, 20, 0.05);
+}
+
+.gChipDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid color-mix(in srgb, var(--cat) 65%, var(--ink-2));
+  background: var(--cat);
+  flex-shrink: 0;
+}
+
+.gChipLeaf {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink);
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+}
+
+.gChipEmpty {
+  cursor: default;
+}
+
+.gChipEmpty:hover {
+  background: transparent;
+}
+
+.gChipEmpty .gChipDot {
+  border-color: rgba(26, 24, 20, 0.22);
+  background: transparent;
+}
+
+.gChipEmpty .gChipLeaf {
+  color: var(--ink-4);
+  font-style: italic;
+}
+
+.gBarHint {
+  margin-left: auto;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-style: italic;
+  color: var(--ink-4);
+  white-space: nowrap;
+}
+
+/* ───────── Canvas frame ───────── */
+
+.canvasOuter {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  display: flex;
+}
+
+.canvasInner {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  display: flex;
+}
+
+.canvasWrap {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+  cursor: grab;
+}
+
+.canvasWrap:active {
+  cursor: grabbing;
+}
+
+.treeSvg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  user-select: none;
+}
+
+/* ───────── Breadcrumb ───────── */
+
+.breadcrumb {
+  position: absolute;
+  top: 14px;
+  left: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 10;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  pointer-events: none;
+}
+
+.crumb {
+  pointer-events: auto;
+  cursor: pointer;
+  padding: 2px 0;
+  border-bottom: 1px dashed transparent;
+  background: none;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+}
+
+.crumb:hover {
+  color: var(--ink);
+  border-bottom-color: rgba(26, 24, 20, 0.3);
+}
+
+.crumbActive {
+  color: var(--ink);
+}
+
+.crumbSep {
+  opacity: 0.5;
+}
+
+/* ───────── Legend ───────── */
+
+.legend {
+  position: absolute;
+  bottom: 14px;
+  left: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  z-index: 10;
+}
+
+.swatch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.swatch .swatchDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid color-mix(in srgb, var(--cat) 65%, var(--ink-2));
+  background: var(--cat);
+}
+
+.swatchGhost .swatchDot {
+  background: transparent;
+  border-style: dashed;
+  border-color: rgba(26, 24, 20, 0.22);
+}
+
+.legendHint {
+  opacity: 0.5;
+}
+
+/* ───────── Goal mark ─────────
+   A category-tinted Goal glyph planted just outside the hex at the growing
+   tip of the branch. The plant animation scales it in so newly-set goals
+   snap into place with a small beat rather than fading. */
+
+@keyframes goalTagPlant {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.goalTag {
+  /* Direction varies per leaf, so the plant animation scales from the
+     icon's own centre rather than tracking a fixed anchor. */
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: goalTagPlant 340ms cubic-bezier(0.22, 1.25, 0.4, 1) both;
+}
+
+.swatchGoal .swatchDot {
+  /* Cream fill + dark border stands in for the paper tag itself, skipping
+     the category tint other swatches use. */
+  border-color: var(--ink);
+  background: #ece1c9;
+}
+
+/* ───────── Toast ───────── */
+
+.toast {
+  position: absolute;
+  bottom: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ink);
+  color: var(--wall-light);
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 6px 18px rgba(20, 16, 10, 0.22);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s, transform 0.2s;
+  z-index: 50;
+}
+
+.toastShow {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.toastDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--cat, #fff);
+}
+
+/* ───────── Tree open-sequence animations ───────── */
+
+/* Phase 1 — solid stroke draws from center → category glyph (≈0–220ms). */
+.catLineDraw {
+  stroke-dasharray: var(--line-len);
+  stroke-dashoffset: var(--line-len);
+  animation: drawStroke 220ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes drawStroke {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Phase 2 — dashed ring around the selected hex eases in. Delay is applied
+   inline (≈180ms for category, 0ms for leaf selection). */
+.selectedRing {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: scale(0.86);
+  animation: ringFadeIn 200ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes ringFadeIn {
+  to {
+    opacity: 0.65;
+    transform: scale(1);
+  }
+}
+
+/* Phase 3a — leaf connector lines draw outward from parent simultaneously
+   (≈260–480ms). */
+.leafLineDraw {
+  opacity: 0;
+  stroke-dasharray: var(--line-len);
+  stroke-dashoffset: var(--line-len);
+  animation:
+    drawStroke 220ms cubic-bezier(0.22, 1, 0.36, 1) 260ms forwards,
+    leafLineFade 100ms linear 260ms forwards;
+}
+
+@keyframes leafLineFade {
+  to {
+    opacity: 0.55;
+  }
+}
+
+/* Phase 3b — leaf hexes bloom out of the parent center simultaneously
+   (≈260–460ms). transform-origin is the parent category position so each
+   leaf appears to grow OUT of the glyph rather than from its own center. */
+.leafBloom {
+  opacity: 0;
+  transform: scale(0.32);
+  transform-box: view-box;
+  transform-origin: var(--ox) var(--oy);
+  animation: leafBloomIn 200ms cubic-bezier(0.22, 1, 0.36, 1) 260ms forwards;
+}
+
+/* Tier-2 (subcategory → leaf) variants. The parent subcategory hex is already
+   in place when this fires, so the lines + hexes don't need to wait — they
+   snap out immediately and quickly, giving the subcategory open a noticeably
+   crisper feel than the tier-1 open. */
+.leafLineDraw.tier2 {
+  animation:
+    drawStroke 140ms cubic-bezier(0.22, 1, 0.36, 1) 0ms forwards,
+    leafLineFade 80ms linear 0ms forwards;
+}
+
+.leafBloom.tier2 {
+  animation: leafBloomIn 140ms cubic-bezier(0.22, 1, 0.36, 1) 0ms forwards;
+}
+
+@keyframes leafBloomIn {
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ───────── Reverse (close) sequence ─────────
+   Mirrors the open order: leaves retract first, then the ring fades out,
+   then the center→category line undraws back to the boulderer. The .closing
+   modifier overrides the open animation on the same element instances, so
+   they animate from their currently-open state back to invisible. */
+
+@keyframes drawStrokeReverse {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: var(--line-len);
+  }
+}
+
+/* `both` fill-mode is critical here: with `forwards`, the 400ms delay would
+   fall back to the base `.catLineDraw` rule (stroke-dashoffset: var(--line-len),
+   i.e. invisible) and the line would snap to gone then re-appear to undraw.
+   `both` applies the keyframe `from` state during the delay so the line stays
+   fully drawn until its turn to retract. Same reason on the other .closing
+   rules with delays. */
+.catLineDraw.closing {
+  animation: drawStrokeReverse 160ms cubic-bezier(0.22, 1, 0.36, 1) 400ms both;
+}
+
+@keyframes ringFadeOut {
+  from {
+    opacity: 0.65;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.86);
+  }
+}
+
+.selectedRing.closing {
+  animation: ringFadeOut 240ms cubic-bezier(0.22, 1, 0.36, 1) 200ms both;
+}
+
+@keyframes leafLineUndraw {
+  from {
+    opacity: 0.55;
+    stroke-dashoffset: 0;
+  }
+  to {
+    opacity: 0;
+    stroke-dashoffset: var(--line-len);
+  }
+}
+
+.leafLineDraw.closing {
+  animation: leafLineUndraw 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes leafBloomOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.32);
+  }
+}
+
+.leafBloom.closing {
+  animation: leafBloomOut 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Tier-2 close — match the snappier open so subcategory collapse doesn't feel
+   slower than its expand. */
+.leafLineDraw.tier2.closing {
+  animation: leafLineUndraw 160ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.leafBloom.tier2.closing {
+  animation: leafBloomOut 160ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .catLineDraw,
+  .catLineDraw.closing,
+  .leafLineDraw,
+  .leafLineDraw.closing,
+  .leafLineDraw.tier2,
+  .leafLineDraw.tier2.closing {
+    animation: none;
+    stroke-dashoffset: 0;
+    opacity: 0.55;
+  }
+  .selectedRing,
+  .selectedRing.closing {
+    animation: none;
+    opacity: 0.65;
+    transform: none;
+  }
+  .leafBloom,
+  .leafBloom.closing,
+  .leafBloom.tier2,
+  .leafBloom.tier2.closing {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
 }

@@ -6,11 +6,10 @@ import { GoalsProvider } from "../../contexts/GoalsContext";
 import type { Goal, TreeLeaf } from "../../types";
 
 const FOOTWORK_LEAF: TreeLeaf = {
-  id: "footwork",
-  label: "Footwork",
+  id: "foot-placement",
+  label: "Foot Placement",
   description: "Develop precise foot placement.",
   allowedKinds: ["climb"],
-  exercises: [{ name: "Silent Feet", detail: "Climb without sound" }],
 };
 
 function renderPanel(opts: { leaf?: TreeLeaf; initialGoals?: Goal[] } = {}) {
@@ -42,11 +41,11 @@ describe("SkillDetailPanel goal lifecycle", () => {
     await user.click(screen.getByRole("button", { name: /set as goal/i }));
     expect(screen.getByRole("button", { name: /remove goal/i })).toBeTruthy();
     const stored = JSON.parse(localStorage.getItem("volume:goals") ?? "[]");
-    expect(stored).toEqual([{ leafId: "footwork" }]);
+    expect(stored).toEqual([{ leafId: "foot-placement" }]);
   });
 
   it("clicking Remove Goal flips back to Set as Goal and clears the stored goal", async () => {
-    const { user } = renderPanel({ initialGoals: [{ leafId: "footwork" }] });
+    const { user } = renderPanel({ initialGoals: [{ leafId: "foot-placement" }] });
     expect(screen.getByRole("button", { name: /remove goal/i })).toBeTruthy();
     await user.click(screen.getByRole("button", { name: /remove goal/i }));
     expect(screen.getByRole("button", { name: /set as goal/i })).toBeTruthy();
@@ -57,11 +56,11 @@ describe("SkillDetailPanel goal lifecycle", () => {
   it("disables the Set button when the user already has 5 goals", () => {
     renderPanel({
       initialGoals: [
-        { leafId: "body-positioning" },
+        { leafId: "balance-weight-shifting" },
         { leafId: "dynamic-movement" },
         { leafId: "hip-mobility" },
         { leafId: "shoulder-mobility" },
-        { leafId: "finger-strength" },
+        { leafId: "max-finger-strength" },
       ],
     });
     const btn = screen.getByRole("button", { name: /goals full/i }) as HTMLButtonElement;
@@ -71,8 +70,8 @@ describe("SkillDetailPanel goal lifecycle", () => {
   it("still allows Remove Goal when at the 5-goal cap if the panel's leaf is one of the goals", async () => {
     const { user } = renderPanel({
       initialGoals: [
-        { leafId: "footwork" },
-        { leafId: "body-positioning" },
+        { leafId: "foot-placement" },
+        { leafId: "balance-weight-shifting" },
         { leafId: "dynamic-movement" },
         { leafId: "hip-mobility" },
         { leafId: "shoulder-mobility" },
